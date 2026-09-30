@@ -11,8 +11,13 @@ dependencies:
     sdk: flutter
   bowling_core:
     path: ../packages/bowling_core
-  # camera: ^0.11.0                 # Phase 2: live capture from both phones
-  # google_mlkit_pose_detection: ^0.13.0  # or MediaPipe Tasks plugin -- Phase 2
+  biomechanics_core:
+    path: ../packages/biomechanics_core
+  camera: ^0.11.0
+  google_mlkit_pose_detection: ^0.13.0
+  google_mlkit_commons: ^0.9.0
+  # Phase 4: pin detection -- likely a custom TFLite model via tflite_flutter,
+  # once real pin-deck footage has been used to train it.
 
 dev_dependencies:
   flutter_test:
