@@ -24,6 +24,7 @@ class _BiomechanicsScreenState extends State<BiomechanicsScreen> {
   BowlerView _view = BowlerView.back;
 
   final PeakMetricsTracker _peaks = PeakMetricsTracker();
+  final DisplacementOutlierFilter _outlierFilter = DisplacementOutlierFilter();
   FrameMetrics? _latestMetrics;
   Point2D? _lastBallPosition;
   DateTime? _lastFrameTime;
@@ -92,13 +93,25 @@ class _BiomechanicsScreenState extends State<BiomechanicsScreen> {
     _lastFrameTime = now;
 
     final mapper = PoseFrameMapper(view: _view);
+    final previousBallPosition = _lastBallPosition;
     final result = mapper.map(
       pose: poses.first,
       frameIndex: _frameIndex++,
       timestampS: now.millisecondsSinceEpoch / 1000.0,
       dtSeconds: dtSeconds,
-      previousBallPosition: _lastBallPosition,
+      previousBallPosition: previousBallPosition,
     );
+
+    if (result.ballPosition != null && previousBallPosition != null) {
+      final displacement = calculateEuclideanDistance(previousBallPosition, result.ballPosition!);
+      if (_outlierFilter.isOutlier(displacement)) {
+        // Likely a single-frame landmark glitch (e.g. a misplaced wrist):
+        // skip this frame rather than let it corrupt metrics/peaks, and
+        // keep the last good ball position for the next frame's comparison.
+        return;
+      }
+      _outlierFilter.accept(displacement);
+    }
 
     _lastBallPosition = result.ballPosition;
     if (result.metrics == null) return;

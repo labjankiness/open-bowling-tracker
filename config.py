@@ -46,6 +46,13 @@ SUPPORTED_VIEWS = (VIEW_BACK, VIEW_SIDE)
 # --- Visibility threshold: landmarks below this confidence are treated as missing ---
 LANDMARK_VISIBILITY_THRESHOLD = 0.5
 
+# --- Frame-to-frame ball-displacement outlier rejection (see core/tracker.py) ---
+# A displacement more than this many times the recent median is treated as a
+# single-frame landmark glitch rather than real motion.
+VELOCITY_OUTLIER_FACTOR = 6.0
+VELOCITY_OUTLIER_MIN_SAMPLES = 5
+VELOCITY_OUTLIER_WINDOW = 15
+
 # --- Pin-deck analyzer defaults (see core/pin_detector.py for tuning guidance) ---
 PIN_DECK_ROI = None  # (x, y, width, height) in pixels, or None for full frame
 PIN_MIN_AREA = 150.0

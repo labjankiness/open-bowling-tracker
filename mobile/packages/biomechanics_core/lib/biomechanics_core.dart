@@ -9,3 +9,4 @@ library biomechanics_core;
 export 'src/point2d.dart';
 export 'src/bowling_analytics.dart';
 export 'src/frame_metrics.dart';
+export 'src/displacement_outlier_filter.dart';

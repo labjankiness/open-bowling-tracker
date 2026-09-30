@@ -5,7 +5,9 @@ Wires together `PoseEstimator` (perception) and the pure functions in
 file and produces a per-frame metrics history plus a peak-value summary.
 """
 
+from collections import deque
 from pathlib import Path
+from statistics import median
 from typing import List, Optional
 
 import cv2
@@ -41,6 +43,10 @@ class BowlingTracker:
         self.history: List[analytics.FrameMetrics] = []
         self.fps: float = 0.0
         self.frame_count: int = 0
+
+        # Rolling window of accepted frame-to-frame ball displacements, used
+        # to reject single-frame landmark glitches (see _is_displacement_outlier).
+        self._recent_displacements: deque = deque(maxlen=config.VELOCITY_OUTLIER_WINDOW)
 
     def run(self) -> RunSummary:
         """Process the full video and return the peak-value summary."""
@@ -115,6 +121,17 @@ class BowlingTracker:
 
         ball_position = analytics.estimate_ball_position(left_wrist, right_wrist)
 
+        displacement = None
+        if prev_ball_position is not None:
+            displacement = analytics.calculate_euclidean_distance(prev_ball_position, ball_position)
+            if self._is_displacement_outlier(displacement):
+                # A single-frame landmark glitch (e.g. a misplaced wrist) can
+                # otherwise produce an implausible velocity/lateral-distance
+                # spike; skip this frame rather than let it corrupt metrics
+                # and peaks, and keep the last good ball position for the
+                # next frame's comparison.
+                return None, prev_ball_position
+
         # Lead-leg selection differs by view: back-view tracks the sliding
         # (front) leg's knee/ankle for flexion and lateral drift; side-view
         # is assumed to be filmed from the sliding-leg side already.
@@ -131,10 +148,12 @@ class BowlingTracker:
         )
 
         velocity = 0.0
-        if prev_ball_position is not None:
-            velocity = analytics.calculate_release_velocity(
-                prev_ball_position, ball_position, dt_seconds, self.pixels_per_meter
-            )
+        if displacement is not None:
+            self._recent_displacements.append(displacement)
+            distance = displacement
+            if self.pixels_per_meter:
+                distance /= self.pixels_per_meter
+            velocity = distance / dt_seconds if dt_seconds > 0 else 0.0
 
         metrics = analytics.FrameMetrics(
             frame_index=frame_index,
@@ -146,6 +165,21 @@ class BowlingTracker:
             ball_velocity=velocity,
         )
         return metrics, ball_position
+
+    def _is_displacement_outlier(self, displacement: float) -> bool:
+        """True if `displacement` is implausibly large next to recent frames.
+
+        Calibration-free: uses the median of recently *accepted* ball
+        displacements as a running baseline rather than an absolute
+        pixel/velocity threshold, since that baseline scales naturally with
+        camera distance, resolution, and frame rate.
+        """
+        if len(self._recent_displacements) < config.VELOCITY_OUTLIER_MIN_SAMPLES:
+            return False
+        baseline = median(self._recent_displacements)
+        if baseline <= 0:
+            return False
+        return displacement > baseline * config.VELOCITY_OUTLIER_FACTOR
 
     def _build_summary(self) -> RunSummary:
         from core.metrics_logger import MetricsLogger
