@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'pin_camera_screen.dart';
 import 'pin_scoring_screen.dart';
 import 'biomechanics_screen.dart';
 
@@ -36,8 +37,15 @@ class HomeScreen extends StatelessWidget {
                 icon: const Icon(Icons.sports_score),
                 label: const Text('Pin-deck camera (live scoring)'),
                 onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const PinCameraScreen()),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const PinScoringScreen()),
                 ),
+                child: const Text('Manual scoring only (no camera)'),
               ),
             ],
           ),

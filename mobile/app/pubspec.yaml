@@ -13,11 +13,14 @@ dependencies:
     path: ../packages/bowling_core
   biomechanics_core:
     path: ../packages/biomechanics_core
+  pin_core:
+    path: ../packages/pin_core
   camera: ^0.11.0
   google_mlkit_pose_detection: ^0.13.0
   google_mlkit_commons: ^0.9.0
-  # Phase 4: pin detection -- likely a custom TFLite model via tflite_flutter,
-  # once real pin-deck footage has been used to train it.
+  # Phase 4: replace manual pin-count confirmation with a trained detector
+  # (likely TFLite via tflite_flutter), once real pin-deck footage has been
+  # labeled and used to train it.
 
 dev_dependencies:
   flutter_test:
