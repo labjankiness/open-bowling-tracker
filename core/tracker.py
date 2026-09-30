@@ -55,7 +55,7 @@ class BowlingTracker:
         prev_ball_position: Optional[np.ndarray] = None
 
         try:
-            with PoseEstimator() as estimator:
+            with PoseEstimator(fps=self.fps) as estimator:
                 frame_index = 0
                 while True:
                     ok, frame = capture.read()

@@ -1,4 +1,10 @@
-"""MediaPipe Pose wrapper: turns a raw BGR frame into pixel-space landmarks."""
+"""MediaPipe Pose wrapper: turns a raw BGR frame into pixel-space landmarks.
+
+Uses the MediaPipe Tasks API (`mp.tasks.vision.PoseLandmarker`), not the
+older `mp.solutions.pose` API -- the legacy `solutions` module has been
+removed from current MediaPipe releases. Requires a downloaded model
+bundle; see `config.POSE_MODEL_PATH`.
+"""
 
 from dataclasses import dataclass
 from typing import Dict, Optional
@@ -21,67 +27,76 @@ class Landmark:
 
 
 class PoseEstimator:
-    """Thin, stateful wrapper around `mediapipe.solutions.pose.Pose`.
+    """Thin, stateful wrapper around `mediapipe.tasks.vision.PoseLandmarker`.
 
     Kept separate from the analytics math so the geometry core in
     `analytics.py` never has to know anything about MediaPipe itself.
+    Runs in VIDEO mode (`detect_for_video`), which requires monotonically
+    increasing per-frame timestamps -- tracked internally from the video's
+    fps so callers just call `process(frame)` per decoded frame.
     """
 
     def __init__(
         self,
+        model_path: str = config.POSE_MODEL_PATH,
+        fps: float = 30.0,
         min_detection_confidence: float = config.MIN_DETECTION_CONFIDENCE,
         min_tracking_confidence: float = config.MIN_TRACKING_CONFIDENCE,
-        model_complexity: int = config.MODEL_COMPLEXITY,
     ) -> None:
-        self._mp_pose = mp.solutions.pose
-        self._pose = self._mp_pose.Pose(
-            static_image_mode=False,
-            model_complexity=model_complexity,
-            min_detection_confidence=min_detection_confidence,
+        base_options = mp.tasks.BaseOptions(model_asset_path=model_path)
+        vision = mp.tasks.vision
+        options = vision.PoseLandmarkerOptions(
+            base_options=base_options,
+            running_mode=vision.RunningMode.VIDEO,
+            min_pose_detection_confidence=min_detection_confidence,
             min_tracking_confidence=min_tracking_confidence,
         )
-        self.drawing_utils = mp.solutions.drawing_utils
-        self.drawing_styles = mp.solutions.drawing_styles
-        self.pose_connections = self._mp_pose.POSE_CONNECTIONS
+        self._landmarker = vision.PoseLandmarker.create_from_options(options)
+        self._connections = vision.PoseLandmarksConnections.POSE_LANDMARKS
+        self._drawing_utils = vision.drawing_utils
+        self._ms_per_frame = 1000.0 / fps if fps > 0 else 1000.0 / 30.0
+        self._next_timestamp_ms = 0
 
     def process(self, frame_bgr: np.ndarray) -> Optional["FrameLandmarks"]:
         """Run pose inference on one BGR frame.
 
         Returns None if no pose was detected in the frame.
         """
-        frame_rgb = frame_bgr[:, :, ::-1]
-        frame_rgb.flags.writeable = False
-        results = self._pose.process(frame_rgb)
-        frame_rgb.flags.writeable = True
+        rgb = frame_bgr[:, :, ::-1]
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=np.ascontiguousarray(rgb))
 
-        if not results.pose_landmarks:
+        timestamp_ms = self._next_timestamp_ms
+        self._next_timestamp_ms += int(round(self._ms_per_frame))
+        result = self._landmarker.detect_for_video(mp_image, timestamp_ms)
+
+        if not result.pose_landmarks:
             return None
 
         height, width = frame_bgr.shape[:2]
+        raw_landmarks = result.pose_landmarks[0]
         landmarks: Dict[int, Landmark] = {}
         for idx in config.REQUIRED_LANDMARKS:
-            lm = results.pose_landmarks.landmark[idx]
+            lm = raw_landmarks[idx]
             landmarks[idx] = Landmark(
                 x=lm.x * width,
                 y=lm.y * height,
                 visibility=lm.visibility,
             )
 
-        return FrameLandmarks(landmarks=landmarks, raw_result=results)
+        return FrameLandmarks(landmarks=landmarks, raw_landmarks=raw_landmarks)
 
     def draw(self, frame_bgr: np.ndarray, frame_landmarks: "FrameLandmarks") -> np.ndarray:
         """Draw the pose skeleton onto a copy of the frame for visualization/export."""
         annotated = frame_bgr.copy()
-        self.drawing_utils.draw_landmarks(
+        self._drawing_utils.draw_landmarks(
             annotated,
-            frame_landmarks.raw_result.pose_landmarks,
-            self.pose_connections,
-            landmark_drawing_spec=self.drawing_styles.get_default_pose_landmarks_style(),
+            frame_landmarks.raw_landmarks,
+            connections=self._connections,
         )
         return annotated
 
     def close(self) -> None:
-        self._pose.close()
+        self._landmarker.close()
 
     def __enter__(self) -> "PoseEstimator":
         return self
@@ -95,7 +110,7 @@ class FrameLandmarks:
     """Pixel-space landmarks for a single processed frame."""
 
     landmarks: Dict[int, Landmark]
-    raw_result: object
+    raw_landmarks: object
 
     def get(self, index: int) -> Optional[Landmark]:
         lm = self.landmarks.get(index)

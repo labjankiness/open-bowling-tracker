@@ -91,12 +91,49 @@ source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+`track` needs a MediaPipe Pose Landmarker model bundle (not bundled with the
+`mediapipe` package -- current MediaPipe releases dropped the old
+`mp.solutions` API in favor of the Tasks API, which loads an explicit model
+file). Download it once:
+
+```bash
+mkdir -p models
+curl -sSL -o models/pose_landmarker_lite.task \
+  https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task
+```
+
 ## Tests
 
 ```bash
 pip install pytest
 pytest tests/
 ```
+
+## Findings from real footage (first real-world test pass)
+
+Tested against real phone-recorded footage (4K portrait, 60fps, camera
+mounted on the ball-return rack pointing down the lane -- captures both the
+bowler's back and the full pin deck in one shot):
+
+- **`track` works.** MediaPipe pose detection reliably picks up the bowler
+  even at this distance (~99.9% landmark confidence in testing) and the
+  pipeline runs end-to-end on a real clip. One issue found: peak release
+  velocity came back at an implausible ~16,700 px/s on a 28s clip -- almost
+  certainly a single-frame landmark jitter spike (e.g. a wrist landmark
+  briefly misplaced for one frame), not real motion. There's currently no
+  outlier rejection or smoothing on the frame-to-frame metrics; a median
+  filter or a sanity-check bound on frame-to-frame displacement would fix
+  this and is the next real improvement to make here.
+- **`score`'s classical-CV pin detector does not work at this camera
+  distance.** At the resolution/distance in this footage, individual pins
+  are only ~20-30px tall in the analysis frame -- too small and low-contrast
+  for Otsu thresholding + contour counting, even with a tight per-lane crop.
+  Global thresholding on the full frame instead picks up the ceiling, ad
+  screens, and ball-return machinery as the "brightest" regions. This isn't
+  a tuning problem; it confirms the pin-detection approach needs either a
+  closer/more-zoomed camera setup, or (more realistically for a fixed
+  camera) a trained small object-detection model per the Phase 4 mobile
+  roadmap, rather than more classical-CV tuning.
 
 ## Notes on the ball position
 

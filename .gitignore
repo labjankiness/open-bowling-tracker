@@ -7,4 +7,5 @@ data/output/*
 !data/output/.gitkeep
 logs/metrics_log.csv
 logs/game_log.csv
+models/*.task
 .DS_Store

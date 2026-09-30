@@ -31,9 +31,12 @@ REQUIRED_LANDMARKS = [
 ]
 
 # --- MediaPipe Pose model settings ---
+# Tasks-API model bundle; download with:
+#   curl -sSL -o models/pose_landmarker_lite.task \
+#     https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task
+POSE_MODEL_PATH = str(PROJECT_ROOT / "models" / "pose_landmarker_lite.task")
 MIN_DETECTION_CONFIDENCE = 0.6
 MIN_TRACKING_CONFIDENCE = 0.6
-MODEL_COMPLEXITY = 1
 
 # --- Supported camera views ---
 VIEW_BACK = "back"
