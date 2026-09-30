@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.pyc
+data/input/*
+!data/input/.gitkeep
+data/output/*
+!data/output/.gitkeep
+logs/metrics_log.csv
+logs/game_log.csv
+.DS_Store

@@ -1,0 +1,11 @@
+# Flutter/Dart build artifacts
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/build/
+**/.packages
+*.iml
+.idea/
+
+# Keep pubspec.lock for the app (reproducible builds); ignore for library packages
+packages/*/pubspec.lock
