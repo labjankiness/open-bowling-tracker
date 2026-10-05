@@ -143,86 +143,136 @@ def transcode_to_h264(video_path: Path) -> bool:
     return False
 
 
-def generate_bowling_advice(summary: dict, history: list) -> list:
+def load_bowler_baseline_profile() -> Optional[dict]:
+    profile_path = PROJECT_ROOT / "data" / "bowler_profile.json"
+    if profile_path.exists():
+        try:
+            with open(profile_path, "r") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return None
+
+
+def generate_bowling_advice(summary: dict, history: list, handedness: str = "left", style: str = "2-handed") -> list:
     advice = []
-    
-    # 1. Spine Tilt Assessment
+    is_lefty = (handedness == "left")
+    is_two_handed = (style == "2-handed")
+
+    # Personal Baseline Comparison (if trained profile exists)
+    profile = load_bowler_baseline_profile()
+    if profile and "baselines" in profile:
+        base_speed = profile["baselines"]["ball_speed_mph"].get("mean")
+        base_knee = profile["baselines"]["knee_flexion_at_release_deg"].get("mean")
+        base_spine = profile["baselines"]["spine_tilt_at_release_deg"].get("mean")
+        trained_count = profile.get("training_clips_processed", 0)
+
+        comp_parts = []
+        speed_val = summary.get("ball_speed_mph")
+        knee_val = summary.get("knee_flexion_at_release_deg")
+        spine_val = summary.get("spine_tilt_at_release_deg")
+
+        if speed_val and base_speed:
+            diff = round(speed_val - base_speed, 1)
+            comp_parts.append(f"speed {diff:+} mph" if diff != 0 else "speed on target")
+        if knee_val and base_knee:
+            diff = round(knee_val - base_knee, 1)
+            comp_parts.append(f"knee bend {diff:+}°" if diff != 0 else "knee bend on target")
+        if spine_val and base_spine:
+            diff = round(spine_val - base_spine, 1)
+            comp_parts.append(f"spine tilt {diff:+}°" if diff != 0 else "spine tilt on target")
+
+        if comp_parts:
+            advice.append({
+                "category": f"Personal Baseline ({trained_count} Shots Trained)",
+                "status": "Trained Benchmark",
+                "badge": "success",
+                "message": f"Compared to your personal trained baseline: {', '.join(comp_parts)}. Tailored for your {handedness} {style} mechanics."
+            })
+
+    # 1. Spine Tilt Assessment (tailored for 2-handed vs 1-handed)
     spine = summary.get("spine_tilt_at_release_deg")
     if spine is not None:
-        if 28.0 <= spine <= 45.0:
+        target_min = 32.0 if is_two_handed else 26.0
+        target_max = 50.0 if is_two_handed else 42.0
+
+        if target_min <= spine <= target_max:
             advice.append({
                 "category": "Posture & Spine Tilt",
-                "status": "Optimal",
+                "status": "Solid Leverage",
                 "badge": "success",
-                "message": f"Solid forward trunk tilt at {spine:.1f}°. This provides great leverage and keeps your head stable over the shot."
+                "message": f"Forward trunk tilt is {spine:.1f}° ({style} profile). Excellent leverage for maintaining head stability and swing trajectory."
             })
-        elif spine < 28.0:
+        elif spine < target_min:
             advice.append({
                 "category": "Posture & Spine Tilt",
                 "status": "Too Upright",
                 "badge": "warning",
-                "message": f"Trunk is upright at {spine:.1f}°. Bend slightly deeper from the hips at the foul line to project the ball smoothly out onto the lane."
+                "message": f"Torso is relatively upright at {spine:.1f}°. For a {style} delivery, bending deeper from the hips creates more flat-spot projection."
             })
         else:
             advice.append({
                 "category": "Posture & Spine Tilt",
                 "status": "Deep Tilt",
                 "badge": "info",
-                "message": f"Aggressive forward tilt ({spine:.1f}°). Ensure your head doesn't drop past the foul line to preserve slide balance."
+                "message": f"Aggressive forward tilt ({spine:.1f}°). Ensure your center of gravity stays behind your slide foot to preserve finish balance."
             })
 
-    # 2. Knee Leverage Assessment
+    # 2. Knee Leverage Assessment (tracks correct slide leg)
     knee = summary.get("knee_flexion_at_release_deg")
     if knee is not None:
+        slide_leg = "Right slide knee" if is_lefty else "Left slide knee"
         if 40.0 <= knee <= 65.0:
             advice.append({
                 "category": "Knee Leverage & Slide",
                 "status": "Great Bend",
                 "badge": "success",
-                "message": f"Sliding knee flexion is {knee:.1f}°. Strong, stable lower body base driving into the finish."
+                "message": f"{slide_leg} flexion is {knee:.1f}°. Strong, stable lower body base driving into the finish."
             })
         elif knee < 40.0:
             advice.append({
                 "category": "Knee Leverage & Slide",
                 "status": "Stiff Leg",
                 "badge": "warning",
-                "message": f"Sliding knee is relatively straight ({knee:.1f}°). Lowering your center of gravity expands your release flat-spot."
+                "message": f"{slide_leg} is relatively straight ({knee:.1f}°). Deepening your knee bend increases slide leverage and pocket entry angle."
             })
 
     # 3. Ball Speed Assessment
     speed = summary.get("ball_speed_mph")
     if speed is not None:
-        if 15.0 <= speed <= 18.0:
+        if 14.5 <= speed <= 17.8:
             advice.append({
                 "category": "Ball Speed",
                 "status": "Tour Sweetspot",
                 "badge": "success",
-                "message": f"Estimated speed is {speed:.1f} mph — perfect balance of energy transfer and pocket carry."
+                "message": f"Estimated speed is {speed:.1f} mph — ideal match for typical league and tournament oil conditions."
             })
-        elif speed < 15.0:
+        elif speed < 14.5:
             advice.append({
                 "category": "Ball Speed",
                 "status": "Control Speed",
                 "badge": "info",
-                "message": f"Release speed is around {speed:.1f} mph. Increase footwork tempo on your final two steps if you need more ball speed."
+                "message": f"Release speed is around {speed:.1f} mph. Accelerating your final footwork cadence will help generate more ball speed."
             })
         else:
             advice.append({
                 "category": "Ball Speed",
-                "status": "High Speed",
+                "status": "Power Speed",
                 "badge": "info",
-                "message": f"Power speed at {speed:.1f} mph! Ensure you maintain enough rotation for the ball to corner at the breakpoint."
+                "message": f"Power speed at {speed:.1f} mph! Ensure ball rotation has enough time to read midlane friction before cornering."
             })
 
     # 4. Release Consistency & Alignment
     lateral = summary.get("lateral_ball_ankle_distance_px")
     if lateral is not None:
         board_est = max(1, round(lateral / 25.0))
+        target_pocket = "1-2 pocket (lefty)" if is_lefty else "1-3 pocket (righty)"
+        slide_side = "right slide ankle" if is_lefty else "left slide ankle"
         advice.append({
             "category": "Launch Point & Alignment",
             "status": "Clean Clearance",
             "badge": "success",
-            "message": f"Launch point is approximately {board_est} boards outside your slide ankle. Nice compact swing path."
+            "message": f"Ball clears approximately {board_est} boards outside your {slide_side}, driving toward the {target_pocket}."
         })
 
     return advice
@@ -230,7 +280,15 @@ def generate_bowling_advice(summary: dict, history: list) -> list:
 
 # --- Background Worker ---
 
-def run_video_job(job_id: str, input_path: str, view: str, mode: str, auto_drive_sync: bool):
+def run_video_job(
+    job_id: str,
+    input_path: str,
+    view: str,
+    mode: str,
+    handedness: str = "left",
+    style: str = "2-handed",
+    auto_drive_sync: bool = True
+):
     job = JOBS.get(job_id)
     if not job:
         return
@@ -252,14 +310,16 @@ def run_video_job(job_id: str, input_path: str, view: str, mode: str, auto_drive
             resolved_view = detect_camera_view(str(input_path))
         job["detected_view"] = resolved_view
 
-        # 2. Biomechanics & Pose Tracking
+        # 2. Biomechanics & Pose Tracking with Heavy Model
         if mode in ("track", "both"):
-            job["message"] = f"Tracking bowler biomechanics ({resolved_view} view)..."
+            job["message"] = f"Tracking bowler biomechanics ({resolved_view} view, {handedness}, {style})..."
             job["progress"] = 35
 
             tracker = BowlingTracker(
                 video_path=str(input_path),
                 view=resolved_view,
+                handedness=handedness,
+                style=style,
                 annotate_output_path=str(annotated_path)
             )
             summary = tracker.run()
@@ -280,15 +340,23 @@ def run_video_job(job_id: str, input_path: str, view: str, mode: str, auto_drive
             est_speed_mph = round(min(22.0, max(11.0, peak_vel * 0.0055 if peak_vel > 500 else 16.2)), 1)
             est_rpm = round(min(550, max(260, peak_vel * 0.14 if peak_vel > 500 else 390)))
             lateral_px = getattr(summary, "peak_lateral_ball_ankle_distance_px", 0.0) or 0.0
-            launch_board = max(1, round(lateral_px / 25.0))
-            breakpoint_board = max(5, round(launch_board * 0.65))
+
+            is_lefty = (tracker.resolved_handedness == "left")
+            if is_lefty:
+                launch_board = max(1, min(39, round(12.0 + (lateral_px / 30.0))))
+                breakpoint_board = max(3, min(launch_board - 2, round(launch_board * 0.58)))
+            else:
+                launch_board = max(1, min(39, round(lateral_px / 25.0)))
+                breakpoint_board = max(5, round(launch_board * 0.65))
 
             summary_dict = {
                 "peak_release_velocity_px_s": peak_vel,
                 "ball_speed_mph": est_speed_mph,
                 "ball_rotation_rpm": est_rpm,
-                "launch_point_board": f"Board {launch_board}",
+                "launch_point_board": f"Board {launch_board} ({'Lefty' if is_lefty else 'Righty'})",
                 "breakpoint": f"Board {breakpoint_board} (Apex)",
+                "handedness": tracker.resolved_handedness,
+                "delivery_style": tracker.resolved_style,
                 "spine_tilt_at_release_deg": getattr(summary, "peak_spine_tilt_deg", None),
                 "knee_flexion_at_release_deg": getattr(summary, "peak_knee_flexion_deg", None),
                 "hip_shoulder_separation_deg": getattr(summary, "peak_hip_shoulder_separation_deg", None),
@@ -298,7 +366,11 @@ def run_video_job(job_id: str, input_path: str, view: str, mode: str, auto_drive
             job["summary"] = summary_dict
             job["history"] = history_data
             job["frame_count"] = tracker.frame_count
-            job["coach_advice"] = generate_bowling_advice(summary_dict, history_data)
+            job["coach_advice"] = generate_bowling_advice(
+                summary_dict, history_data,
+                handedness=tracker.resolved_handedness,
+                style=tracker.resolved_style
+            )
 
         # 3. Pin Deck Scoring
         if mode in ("score", "both"):
@@ -369,8 +441,10 @@ async def api_upload(
     request: Request,
     background_tasks: BackgroundTasks,
     video: UploadFile = File(...),
-    view: str = Form("back"),
-    mode: str = Form("track"),
+    view: str = Form("auto"),
+    mode: str = Form("both"),
+    handedness: str = Form("left"),
+    style: str = Form("2-handed"),
     auto_drive_sync: bool = Form(True),
 ):
     if not is_authenticated(request):
@@ -399,7 +473,7 @@ async def api_upload(
     }
 
     background_tasks.add_task(
-        run_video_job, job_id, str(saved_path), view, mode, auto_drive_sync
+        run_video_job, job_id, str(saved_path), view, mode, handedness, style, auto_drive_sync
     )
 
     return {"job_id": job_id, "status": "queued"}
@@ -567,6 +641,8 @@ async def analyze_training_video(
     filename: str = Form(...),
     view: str = Form("auto"),
     mode: str = Form("both"),
+    handedness: str = Form("left"),
+    style: str = Form("2-handed"),
     auto_drive_sync: bool = Form(True)
 ):
     """Starts analysis on an existing clip from the connected training folder."""
@@ -583,7 +659,7 @@ async def analyze_training_video(
         "filename": filename,
         "status": "queued",
         "progress": 5,
-        "message": f"Queued {filename} from connected training drive...",
+        "message": f"Queued {filename} from connected training drive ({handedness}, {style})...",
         "summary": None,
         "history": [],
         "annotated_video_url": None,
@@ -592,7 +668,7 @@ async def analyze_training_video(
     }
 
     background_tasks.add_task(
-        run_video_job, job_id, str(source_path), view, mode, auto_drive_sync
+        run_video_job, job_id, str(source_path), view, mode, handedness, style, auto_drive_sync
     )
 
     return {"job_id": job_id, "status": "queued"}

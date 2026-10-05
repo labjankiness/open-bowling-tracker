@@ -61,19 +61,37 @@
                     </div>
 
                     <div class="control-group">
+                        <label for="bowlerHandedness">Handedness</label>
+                        <select id="bowlerHandedness" name="handedness">
+                            <option value="left" selected>🎳 Left-Handed (Lefty)</option>
+                            <option value="right">Right-Handed (Righty)</option>
+                            <option value="auto">✨ Auto-Detect</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="deliveryStyle">Delivery Style</label>
+                        <select id="deliveryStyle" name="style">
+                            <option value="2-handed" selected>👐 2-Handed</option>
+                            <option value="1-handed">✋ 1-Handed</option>
+                            <option value="auto">✨ Auto-Detect</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
                         <label for="analysisMode">Analysis Mode</label>
                         <select id="analysisMode" name="mode">
-                            <option value="both" selected>⚡ Full Analysis (Biomechanics + Pin Scoring)</option>
+                            <option value="both" selected>⚡ Full Analysis (Biomechanics + Pins)</option>
                             <option value="track">Biomechanics & Pose Only</option>
                             <option value="score">Pin Deck Scoring Only</option>
                         </select>
                     </div>
 
                     <div class="control-group">
-                        <label for="autoDriveSync">Google Drive Auto-Save</label>
+                        <label for="autoDriveSync">Google Drive Sync</label>
                         <div class="toggle-wrapper">
                             <input type="checkbox" id="autoDriveSync" checked>
-                            <label for="autoDriveSync">Auto-save output to Drive</label>
+                            <label for="autoDriveSync">Auto-save</label>
                         </div>
                     </div>
                 </div>

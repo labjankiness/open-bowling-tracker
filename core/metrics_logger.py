@@ -28,6 +28,8 @@ class RunSummary:
     peak_hip_shoulder_separation_deg: float
     peak_lateral_ball_ankle_distance_px: float
     peak_release_velocity_px_s: float
+    handedness: str = "left"
+    delivery_style: str = "2-handed"
 
 
 class MetricsLogger:

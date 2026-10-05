@@ -68,6 +68,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = new FormData();
         formData.append('video', currentFile);
         formData.append('view', document.getElementById('cameraView').value);
+        formData.append('handedness', document.getElementById('bowlerHandedness').value);
+        formData.append('style', document.getElementById('deliveryStyle').value);
         formData.append('mode', document.getElementById('analysisMode').value);
         formData.append('auto_drive_sync', document.getElementById('autoDriveSync').checked);
 
@@ -425,6 +427,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = new FormData();
         formData.append('filename', filename);
         formData.append('view', document.getElementById('cameraView').value);
+        formData.append('handedness', document.getElementById('bowlerHandedness').value);
+        formData.append('style', document.getElementById('deliveryStyle').value);
         formData.append('mode', document.getElementById('analysisMode').value);
         formData.append('auto_drive_sync', document.getElementById('autoDriveSync').checked);
 

@@ -26,6 +26,8 @@ class BowlingTracker:
         self,
         video_path: str,
         view: str,
+        handedness: str = config.HANDEDNESS_LEFT,
+        style: str = config.STYLE_TWO_HANDED,
         pixels_per_meter: Optional[float] = None,
         annotate_output_path: Optional[str] = None,
     ) -> None:
@@ -37,8 +39,14 @@ class BowlingTracker:
             raise FileNotFoundError(f"Video not found: {self.video_path}")
 
         self.view = view
+        self.handedness = handedness
+        self.style = style
         self.pixels_per_meter = pixels_per_meter
         self.annotate_output_path = annotate_output_path
+
+        # Resolved attributes (defaults to specified handedness/style or auto-detected)
+        self.resolved_handedness = handedness if handedness != config.HANDEDNESS_AUTO else config.HANDEDNESS_LEFT
+        self.resolved_style = style if style != config.STYLE_AUTO else config.STYLE_TWO_HANDED
 
         self.history: List[analytics.FrameMetrics] = []
         self.fps: float = 0.0
@@ -47,6 +55,7 @@ class BowlingTracker:
         # Rolling window of accepted frame-to-frame ball displacements, used
         # to reject single-frame landmark glitches (see _is_displacement_outlier).
         self._recent_displacements: deque = deque(maxlen=config.VELOCITY_OUTLIER_WINDOW)
+        self._wrist_gap_ratios: List[float] = []
 
     def run(self) -> RunSummary:
         """Process the full video and return the peak-value summary."""
@@ -84,6 +93,11 @@ class BowlingTracker:
                     frame_index += 1
 
                 self.frame_count = frame_index
+                
+                # Auto-resolve style if set to auto based on inter-wrist gap ratio
+                if self.style == config.STYLE_AUTO and self._wrist_gap_ratios:
+                    avg_gap = sum(self._wrist_gap_ratios) / len(self._wrist_gap_ratios)
+                    self.resolved_style = config.STYLE_TWO_HANDED if avg_gap < 0.45 else config.STYLE_ONE_HANDED
         finally:
             capture.release()
             if writer is not None:
@@ -119,24 +133,37 @@ class BowlingTracker:
         left_wrist = landmarks.get(config.LEFT_WRIST).xy
         right_wrist = landmarks.get(config.RIGHT_WRIST).xy
 
-        ball_position = analytics.estimate_ball_position(left_wrist, right_wrist)
+        # Record inter-wrist ratio for style detection
+        shoulder_width = max(1.0, float(np.linalg.norm(left_shoulder - right_shoulder)))
+        wrist_dist = float(np.linalg.norm(left_wrist - right_wrist))
+        self._wrist_gap_ratios.append(wrist_dist / shoulder_width)
+
+        # Ball position proxy based on handedness & delivery style
+        is_lefty = (self.resolved_handedness == config.HANDEDNESS_LEFT)
+        dom_wrist = left_wrist if is_lefty else right_wrist
+        sup_wrist = right_wrist if is_lefty else left_wrist
+
+        if self.resolved_style == config.STYLE_ONE_HANDED:
+            ball_position = dom_wrist.copy()
+        else:
+            # Two-handed: dominant hand cradles/rolls from underneath, support hand guides
+            ball_position = 0.75 * dom_wrist + 0.25 * sup_wrist
 
         displacement = None
         if prev_ball_position is not None:
             displacement = analytics.calculate_euclidean_distance(prev_ball_position, ball_position)
             if self._is_displacement_outlier(displacement):
-                # A single-frame landmark glitch (e.g. a misplaced wrist) can
-                # otherwise produce an implausible velocity/lateral-distance
-                # spike; skip this frame rather than let it corrupt metrics
-                # and peaks, and keep the last good ball position for the
-                # next frame's comparison.
                 return None, prev_ball_position
 
-        # Lead-leg selection differs by view: back-view tracks the sliding
-        # (front) leg's knee/ankle for flexion and lateral drift; side-view
-        # is assumed to be filmed from the sliding-leg side already.
-        knee, ankle = (left_knee, left_ankle) if self.view == config.VIEW_BACK else (right_knee, right_ankle)
-        hip_for_knee = left_hip if self.view == config.VIEW_BACK else right_hip
+        # Lead slide leg selection respecting handedness:
+        # Lefty from back view: Right leg is the sliding (front) leg.
+        # Righty from back view: Left leg is the sliding (front) leg.
+        if self.view == config.VIEW_BACK:
+            knee, ankle = (right_knee, right_ankle) if is_lefty else (left_knee, left_ankle)
+            hip_for_knee = right_hip if is_lefty else left_hip
+        else:
+            knee, ankle = (left_knee, left_ankle) if is_lefty else (right_knee, right_ankle)
+            hip_for_knee = left_hip if is_lefty else right_hip
 
         spine_tilt = analytics.calculate_spine_tilt(left_shoulder, right_shoulder, left_hip, right_hip)
         knee_flexion = analytics.calculate_knee_flexion(hip_for_knee, knee, ankle)
@@ -208,6 +235,8 @@ class BowlingTracker:
             peak_hip_shoulder_separation_deg=round(peak_separation, 3),
             peak_lateral_ball_ankle_distance_px=round(peak_lateral_distance, 3),
             peak_release_velocity_px_s=round(peak_velocity, 3),
+            handedness=self.resolved_handedness,
+            delivery_style=self.resolved_style,
         )
 
     def _build_writer(self, capture: cv2.VideoCapture) -> cv2.VideoWriter:

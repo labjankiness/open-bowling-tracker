@@ -31,10 +31,9 @@ REQUIRED_LANDMARKS = [
 ]
 
 # --- MediaPipe Pose model settings ---
-# Tasks-API model bundle; download with:
-#   curl -sSL -o models/pose_landmarker_lite.task \
-#     https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task
-POSE_MODEL_PATH = str(PROJECT_ROOT / "models" / "pose_landmarker_lite.task")
+# Heavy model has the largest receptive field and deepest convolutional layers,
+# providing superior occlusion handling during bowling backswings and releases.
+POSE_MODEL_PATH = str(PROJECT_ROOT / "models" / "pose_landmarker_heavy.task")
 MIN_DETECTION_CONFIDENCE = 0.6
 MIN_TRACKING_CONFIDENCE = 0.6
 
@@ -42,6 +41,17 @@ MIN_TRACKING_CONFIDENCE = 0.6
 VIEW_BACK = "back"
 VIEW_SIDE = "side"
 SUPPORTED_VIEWS = (VIEW_BACK, VIEW_SIDE)
+
+# --- Bowler handedness & style options ---
+HANDEDNESS_LEFT = "left"
+HANDEDNESS_RIGHT = "right"
+HANDEDNESS_AUTO = "auto"
+SUPPORTED_HANDEDNESS = (HANDEDNESS_LEFT, HANDEDNESS_RIGHT, HANDEDNESS_AUTO)
+
+STYLE_TWO_HANDED = "2-handed"
+STYLE_ONE_HANDED = "1-handed"
+STYLE_AUTO = "auto"
+SUPPORTED_STYLES = (STYLE_TWO_HANDED, STYLE_ONE_HANDED, STYLE_AUTO)
 
 # --- Visibility threshold: landmarks below this confidence are treated as missing ---
 LANDMARK_VISIBILITY_THRESHOLD = 0.5
