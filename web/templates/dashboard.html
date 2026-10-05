@@ -266,11 +266,16 @@
                 <p>Browse previously processed bowling clips and original videos from your local storage and Google Drive.</p>
                 
                 <div class="library-tabs">
-                    <button class="tab-btn active" id="tabLocal">Processed Shots (<span id="countLocal">0</span>)</button>
+                    <button class="tab-btn active" id="tabTraining">🎳 Training Drive Clips (<span id="countTraining">0</span>)</button>
+                    <button class="tab-btn" id="tabLocal">Processed Shots (<span id="countLocal">0</span>)</button>
                     <button class="tab-btn" id="tabDrive">Google Drive (<span id="countDrive">0</span>)</button>
                 </div>
 
-                <div id="libraryListLocal" class="library-grid">
+                <div id="libraryListTraining" class="library-grid">
+                    <!-- Training clips injected here -->
+                </div>
+
+                <div id="libraryListLocal" class="library-grid hidden">
                     <!-- Local videos injected here -->
                 </div>
 

@@ -415,7 +415,7 @@ async def get_job_status(job_id: str, request: Request):
     return job
 
 
-@app.get("/api/video/{filename}")
+@app.api_route("/api/video/{filename}", methods=["GET", "HEAD"])
 async def stream_video(filename: str, request: Request):
     """Streams video file with HTTP 206 Partial Content support for seeking in Chrome."""
     if not is_authenticated(request):
@@ -478,6 +478,9 @@ async def save_gdrive_settings(
     return {"status": "ok", "settings": settings}
 
 
+TRAINING_VIDEOS_DIR = Path("/mnt/c/Users/Generate(_)/OneDrive/Videos/Bowling Videos for training")
+
+
 @app.get("/api/library")
 async def get_library(request: Request):
     if not is_authenticated(request):
@@ -492,9 +495,104 @@ async def get_library(request: Request):
                 "size_mb": round(p.stat().st_size / (1024 * 1024), 1)
             })
 
+    # Permanent Training Videos Folder
+    training_videos = []
+    if TRAINING_VIDEOS_DIR.exists():
+        for p in sorted(TRAINING_VIDEOS_DIR.glob("*.*"), key=lambda f: f.stat().st_mtime, reverse=True):
+            if p.suffix.lower() in (".mp4", ".mov", ".m4v"):
+                training_videos.append({
+                    "name": p.name,
+                    "url": f"/api/training-video/{p.name}",
+                    "size_mb": round(p.stat().st_size / (1024 * 1024), 1)
+                })
+
     gdrive_videos = gdrive_manager.list_videos() if gdrive_manager.is_configured() else []
     return {
         "local_videos": local_videos,
+        "training_videos": training_videos,
         "gdrive_videos": gdrive_videos,
         "gdrive_configured": gdrive_manager.is_configured()
     }
+
+
+@app.api_route("/api/training-video/{filename}", methods=["GET", "HEAD"])
+async def stream_training_video(filename: str, request: Request):
+    """Streams training video directly from the connected training drive/folder."""
+    if not is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    video_path = TRAINING_VIDEOS_DIR / filename
+    if not video_path.exists():
+        raise HTTPException(status_code=404, detail="Training video not found")
+
+    file_size = video_path.stat().st_size
+    range_header = request.headers.get("Range")
+
+    if range_header:
+        byte1, byte2 = 0, None
+        match = range_header.replace("bytes=", "").split("-")
+        byte1 = int(match[0])
+        if match[1]:
+            byte2 = int(match[1])
+
+        length = file_size - byte1 if byte2 is None else (byte2 - byte1) + 1
+        
+        def iterfile():
+            with open(video_path, "rb") as f:
+                f.seek(byte1)
+                yield f.read(length)
+
+        headers = {
+            "Content-Range": f"bytes {byte1}-{file_size - 1}/{file_size}",
+            "Accept-Ranges": "bytes",
+            "Content-Length": str(length),
+            "Content-Type": "video/mp4",
+        }
+        return StreamingResponse(iterfile(), status_code=206, headers=headers)
+
+    def iterfile_full():
+        with open(video_path, "rb") as f:
+            yield from f
+
+    return StreamingResponse(
+        iterfile_full(),
+        headers={"Content-Length": str(file_size), "Content-Type": "video/mp4"}
+    )
+
+
+@app.post("/api/analyze-training-video")
+async def analyze_training_video(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    filename: str = Form(...),
+    view: str = Form("auto"),
+    mode: str = Form("both"),
+    auto_drive_sync: bool = Form(True)
+):
+    """Starts analysis on an existing clip from the connected training folder."""
+    if not is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    source_path = TRAINING_VIDEOS_DIR / filename
+    if not source_path.exists():
+        raise HTTPException(status_code=404, detail="Training video not found")
+
+    job_id = uuid.uuid4().hex
+    JOBS[job_id] = {
+        "job_id": job_id,
+        "filename": filename,
+        "status": "queued",
+        "progress": 5,
+        "message": f"Queued {filename} from connected training drive...",
+        "summary": None,
+        "history": [],
+        "annotated_video_url": None,
+        "gdrive_sync": None,
+        "error": None
+    }
+
+    background_tasks.add_task(
+        run_video_job, job_id, str(source_path), view, mode, auto_drive_sync
+    )
+
+    return {"job_id": job_id, "status": "queued"}

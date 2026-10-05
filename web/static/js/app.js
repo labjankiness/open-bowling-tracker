@@ -377,8 +377,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnOpenLibrary = document.getElementById('btnOpenLibrary');
     const btnCloseLibrary = document.getElementById('btnCloseLibraryModal');
     const libraryModal = document.getElementById('libraryModal');
+    const tabTraining = document.getElementById('tabTraining');
     const tabLocal = document.getElementById('tabLocal');
     const tabDrive = document.getElementById('tabDrive');
+    const libraryListTraining = document.getElementById('libraryListTraining');
     const libraryListLocal = document.getElementById('libraryListLocal');
     const libraryListDrive = document.getElementById('libraryListDrive');
 
@@ -393,20 +395,57 @@ document.addEventListener('DOMContentLoaded', () => {
         btnCloseLibrary.addEventListener('click', () => libraryModal.classList.add('hidden'));
     }
 
-    if (tabLocal && tabDrive) {
-        tabLocal.addEventListener('click', () => {
-            tabLocal.classList.add('active');
-            tabDrive.classList.remove('active');
-            libraryListLocal.classList.remove('hidden');
-            libraryListDrive.classList.add('hidden');
-        });
+    function switchLibraryTab(activeTab, activeList) {
+        [tabTraining, tabLocal, tabDrive].forEach(t => { if (t) t.classList.remove('active'); });
+        [libraryListTraining, libraryListLocal, libraryListDrive].forEach(l => { if (l) l.classList.add('hidden'); });
 
-        tabDrive.addEventListener('click', () => {
-            tabDrive.classList.add('active');
-            tabLocal.classList.remove('active');
-            libraryListDrive.classList.remove('hidden');
-            libraryListLocal.classList.add('hidden');
-        });
+        if (activeTab) activeTab.classList.add('active');
+        if (activeList) activeList.classList.remove('hidden');
+    }
+
+    if (tabTraining) {
+        tabTraining.addEventListener('click', () => switchLibraryTab(tabTraining, libraryListTraining));
+    }
+    if (tabLocal) {
+        tabLocal.addEventListener('click', () => switchLibraryTab(tabLocal, libraryListLocal));
+    }
+    if (tabDrive) {
+        tabDrive.addEventListener('click', () => switchLibraryTab(tabDrive, libraryListDrive));
+    }
+
+    async function analyzeTrainingVideo(filename) {
+        libraryModal.classList.add('hidden');
+        btnStart.setAttribute('disabled', 'true');
+        processingSection.classList.remove('hidden');
+        resultsSection.classList.add('hidden');
+        progressBarFill.style.width = '10%';
+        statusMessage.textContent = `Queuing ${filename} from training drive...`;
+        statusPercent.textContent = '10%';
+
+        const formData = new FormData();
+        formData.append('filename', filename);
+        formData.append('view', document.getElementById('cameraView').value);
+        formData.append('mode', document.getElementById('analysisMode').value);
+        formData.append('auto_drive_sync', document.getElementById('autoDriveSync').checked);
+
+        try {
+            const resp = await fetch('/api/analyze-training-video', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!resp.ok) {
+                const err = await resp.json();
+                throw new Error(err.detail || 'Analysis request failed');
+            }
+
+            const data = await resp.json();
+            startPolling(data.job_id);
+        } catch (err) {
+            alert('Error starting analysis: ' + err.message);
+            btnStart.removeAttribute('disabled');
+            processingSection.classList.add('hidden');
+        }
     }
 
     async function loadLibrary() {
@@ -415,72 +454,122 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!resp.ok) return;
             const data = await resp.json();
 
-            document.getElementById('countLocal').textContent = data.local_videos.length;
-            document.getElementById('countDrive').textContent = data.gdrive_videos.length;
-
-            // Render Local
-            libraryListLocal.innerHTML = '';
-            if (data.local_videos.length === 0) {
-                libraryListLocal.innerHTML = '<p class="empty-msg">No processed videos yet. Upload a clip above!</p>';
-            } else {
-                data.local_videos.forEach(vid => {
-                    const item = document.createElement('div');
-                    item.className = 'library-item';
-                    item.innerHTML = `
-                        <div class="lib-info">
-                            <span class="lib-icon">📹</span>
-                            <div>
-                                <strong>${vid.name}</strong>
-                                <small>${vid.size_mb} MB</small>
-                            </div>
-                        </div>
-                        <div class="lib-actions">
-                            <button class="btn btn-sm btn-primary btn-play-lib" data-url="${vid.url}">Play in Player</button>
-                            <a href="${vid.url}" download class="btn btn-sm btn-ghost">Download</a>
-                        </div>
-                    `;
-                    libraryListLocal.appendChild(item);
-                });
-
-                document.querySelectorAll('.btn-play-lib').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const url = e.target.getAttribute('data-url');
-                        const videoElem = document.getElementById('resultVideo');
-                        resultsSection.classList.remove('hidden');
-                        videoElem.src = url;
-                        videoElem.load();
-                        videoElem.play().catch(err => console.log('Autoplay deferred:', err));
-                        document.getElementById('btnDownloadVideo').href = url;
-                        libraryModal.classList.add('hidden');
-                        videoElem.scrollIntoView({ behavior: 'smooth' });
-                    });
-                });
+            if (document.getElementById('countTraining')) {
+                document.getElementById('countTraining').textContent = (data.training_videos || []).length;
+            }
+            if (document.getElementById('countLocal')) {
+                document.getElementById('countLocal').textContent = (data.local_videos || []).length;
+            }
+            if (document.getElementById('countDrive')) {
+                document.getElementById('countDrive').textContent = (data.gdrive_videos || []).length;
             }
 
-            // Render Drive
-            libraryListDrive.innerHTML = '';
-            if (data.gdrive_videos.length === 0) {
-                libraryListDrive.innerHTML = data.gdrive_configured 
-                    ? '<p class="empty-msg">No videos found in your target Google Drive folder.</p>'
-                    : '<p class="empty-msg">Google Drive sync is not configured yet. Click "Google Drive Sync" to connect!</p>';
-            } else {
-                data.gdrive_videos.forEach(vid => {
-                    const item = document.createElement('div');
-                    item.className = 'library-item';
-                    item.innerHTML = `
-                        <div class="lib-info">
-                            <span class="lib-icon">☁️</span>
-                            <div>
-                                <strong>${vid.name}</strong>
-                                <small>Google Drive File</small>
+            // 1. Render Training Drive Clips
+            if (libraryListTraining) {
+                libraryListTraining.innerHTML = '';
+                const trainingList = data.training_videos || [];
+                if (trainingList.length === 0) {
+                    libraryListTraining.innerHTML = '<p class="empty-msg">No videos found in the connected training drive.</p>';
+                } else {
+                    trainingList.forEach(vid => {
+                        const item = document.createElement('div');
+                        item.className = 'library-item';
+                        item.innerHTML = `
+                            <div class="lib-info">
+                                <span class="lib-icon">🎳</span>
+                                <div>
+                                    <strong>${vid.name}</strong>
+                                    <small>${vid.size_mb} MB • Connected Training Drive</small>
+                                </div>
                             </div>
-                        </div>
-                        <div class="lib-actions">
-                            <a href="${vid.webViewLink}" target="_blank" class="btn btn-sm btn-outline">View in Drive ↗</a>
-                        </div>
-                    `;
-                    libraryListDrive.appendChild(item);
+                            <div class="lib-actions">
+                                <button class="btn btn-sm btn-primary btn-analyze-training" data-filename="${vid.name}">⚡ Analyze Shot</button>
+                                <button class="btn btn-sm btn-outline btn-play-lib" data-url="${vid.url}">▶️ Play</button>
+                                <a href="${vid.url}" download class="btn btn-sm btn-ghost">Download</a>
+                            </div>
+                        `;
+                        libraryListTraining.appendChild(item);
+                    });
+
+                    libraryListTraining.querySelectorAll('.btn-analyze-training').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const filename = e.currentTarget.getAttribute('data-filename');
+                            analyzeTrainingVideo(filename);
+                        });
+                    });
+                }
+            }
+
+            // 2. Render Processed Local Videos
+            if (libraryListLocal) {
+                libraryListLocal.innerHTML = '';
+                const localList = data.local_videos || [];
+                if (localList.length === 0) {
+                    libraryListLocal.innerHTML = '<p class="empty-msg">No processed videos yet. Upload a clip above!</p>';
+                } else {
+                    localList.forEach(vid => {
+                        const item = document.createElement('div');
+                        item.className = 'library-item';
+                        item.innerHTML = `
+                            <div class="lib-info">
+                                <span class="lib-icon">📹</span>
+                                <div>
+                                    <strong>${vid.name}</strong>
+                                    <small>${vid.size_mb} MB • Processed Analysis</small>
+                                </div>
+                            </div>
+                            <div class="lib-actions">
+                                <button class="btn btn-sm btn-primary btn-play-lib" data-url="${vid.url}">Play in Player</button>
+                                <a href="${vid.url}" download class="btn btn-sm btn-ghost">Download</a>
+                            </div>
+                        `;
+                        libraryListLocal.appendChild(item);
+                    });
+                }
+            }
+
+            // Common play button handler
+            document.querySelectorAll('.btn-play-lib').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const url = e.currentTarget.getAttribute('data-url');
+                    const videoElem = document.getElementById('resultVideo');
+                    resultsSection.classList.remove('hidden');
+                    videoElem.src = url;
+                    videoElem.load();
+                    videoElem.play().catch(err => console.log('Autoplay deferred:', err));
+                    document.getElementById('btnDownloadVideo').href = url;
+                    libraryModal.classList.add('hidden');
+                    videoElem.scrollIntoView({ behavior: 'smooth' });
                 });
+            });
+
+            // 3. Render Drive Videos
+            if (libraryListDrive) {
+                libraryListDrive.innerHTML = '';
+                const driveList = data.gdrive_videos || [];
+                if (driveList.length === 0) {
+                    libraryListDrive.innerHTML = data.gdrive_configured 
+                        ? '<p class="empty-msg">No videos found in your target Google Drive folder.</p>'
+                        : '<p class="empty-msg">Google Drive sync is not configured yet. Click "Google Drive Sync" to connect!</p>';
+                } else {
+                    driveList.forEach(vid => {
+                        const item = document.createElement('div');
+                        item.className = 'library-item';
+                        item.innerHTML = `
+                            <div class="lib-info">
+                                <span class="lib-icon">☁️</span>
+                                <div>
+                                    <strong>${vid.name}</strong>
+                                    <small>Google Drive File</small>
+                                </div>
+                            </div>
+                            <div class="lib-actions">
+                                <a href="${vid.webViewLink}" target="_blank" class="btn btn-sm btn-outline">View in Drive ↗</a>
+                            </div>
+                        `;
+                        libraryListDrive.appendChild(item);
+                    });
+                }
             }
 
         } catch (e) {
