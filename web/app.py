@@ -38,7 +38,7 @@ JOBS: Dict[str, Dict[str, Any]] = {}
 async def login_page(request: Request):
     if is_authenticated(request):
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
-    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+    return templates.TemplateResponse(request=request, name="login.html", context={"error": None})
 
 
 @app.post("/login")
@@ -55,8 +55,9 @@ async def login_submit(request: Request, response: Response, passcode: str = For
         )
         return resp
     return templates.TemplateResponse(
-        "login.html",
-        {"request": request, "error": "Invalid passcode. Please try again."},
+        request=request,
+        name="login.html",
+        context={"error": "Invalid passcode. Please try again."},
         status_code=status.HTTP_401_UNAUTHORIZED
     )
 
@@ -80,8 +81,9 @@ async def dashboard_page(request: Request):
     
     drive_settings = gdrive_manager.get_settings()
     return templates.TemplateResponse(
-        "dashboard.html",
-        {"request": request, "drive_settings": drive_settings}
+        request=request,
+        name="dashboard.html",
+        context={"drive_settings": drive_settings}
     )
 
 
