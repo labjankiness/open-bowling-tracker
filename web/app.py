@@ -94,24 +94,25 @@ def detect_camera_view(video_path: str) -> str:
         from core.pose_estimator import PoseEstimator
         capture = cv2.VideoCapture(video_path)
         fps = capture.get(cv2.CAP_PROP_FPS) or 30.0
+        frame_width = capture.get(cv2.CAP_PROP_FRAME_WIDTH) or 1920.0
         with PoseEstimator(fps=fps) as estimator:
             checked = 0
-            shoulder_widths = []
+            shoulder_ratios = []
             while checked < 45:
                 ok, frame = capture.read()
                 if not ok:
                     break
                 landmarks = estimator.process(frame)
                 if landmarks is not None:
-                    ls = landmarks.left_shoulder
-                    rs = landmarks.right_shoulder
+                    ls = landmarks.get(config.LEFT_SHOULDER)
+                    rs = landmarks.get(config.RIGHT_SHOULDER)
                     if ls is not None and rs is not None:
-                        shoulder_widths.append(abs(ls[0] - rs[0]))
+                        shoulder_ratios.append(abs(ls.x - rs.x) / frame_width)
                 checked += 1
             capture.release()
-            if shoulder_widths:
-                avg_width = sum(shoulder_widths) / len(shoulder_widths)
-                if avg_width < 0.07:
+            if shoulder_ratios:
+                avg_ratio = sum(shoulder_ratios) / len(shoulder_ratios)
+                if avg_ratio < 0.08:
                     return "side"
     except Exception as e:
         print(f"[AutoDetect] Camera view fallback to 'back': {e}")
@@ -157,18 +158,19 @@ def run_video_job(job_id: str, input_path: str, view: str, mode: str, auto_drive
             history_data = [
                 {
                     "frame_index": m.frame_index,
-                    "ball_velocity_px_s": m.ball_velocity_px_s,
-                    "spine_tilt_deg": m.spine_tilt_deg,
-                    "knee_flexion_deg": m.knee_flexion_deg
+                    "ball_velocity_px_s": getattr(m, "ball_velocity", 0.0),
+                    "spine_tilt_deg": getattr(m, "spine_tilt_deg", 0.0),
+                    "knee_flexion_deg": getattr(m, "knee_flexion_deg", 0.0)
                 }
                 for m in tracker.history
             ]
 
             job["summary"] = {
-                "peak_release_velocity_px_s": summary.peak_release_velocity_px_s,
-                "spine_tilt_at_release_deg": summary.spine_tilt_at_release_deg,
-                "knee_flexion_at_release_deg": summary.knee_flexion_at_release_deg,
-                "hand_speed_at_release_px_s": summary.hand_speed_at_release_px_s,
+                "peak_release_velocity_px_s": getattr(summary, "peak_release_velocity_px_s", None),
+                "spine_tilt_at_release_deg": getattr(summary, "peak_spine_tilt_deg", None),
+                "knee_flexion_at_release_deg": getattr(summary, "peak_knee_flexion_deg", None),
+                "hip_shoulder_separation_deg": getattr(summary, "peak_hip_shoulder_separation_deg", None),
+                "lateral_ball_ankle_distance_px": getattr(summary, "peak_lateral_ball_ankle_distance_px", None),
             }
             job["history"] = history_data
             job["frame_count"] = tracker.frame_count
