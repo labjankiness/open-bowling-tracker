@@ -13,3 +13,8 @@ models/*.task
 # Exploratory training data/tooling -- large generated artifacts and
 # extracted video-frame images, not source code. Regenerate as needed.
 training/
+
+# Private Google Drive and App secrets
+gdrive_credentials.json
+gdrive_settings.json
+.env
