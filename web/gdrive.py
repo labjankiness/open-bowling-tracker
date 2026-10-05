@@ -109,5 +109,29 @@ class GoogleDriveManager:
             print(f"[GoogleDrive] Upload error for {local_path}: {e}")
             return None
 
+    def list_videos(self, custom_folder_id: Optional[str] = None) -> list:
+        """Lists videos in the Google Drive folder."""
+        service = self._get_service()
+        if not service:
+            return []
+
+        settings = self.get_settings()
+        folder_id = custom_folder_id or settings.get("folder_id")
+        query = "mimeType contains 'video/' and trashed = false"
+        if folder_id:
+            query += f" and '{folder_id}' in parents"
+
+        try:
+            results = service.files().list(
+                q=query,
+                pageSize=30,
+                orderBy="createdTime desc",
+                fields="files(id, name, mimeType, webViewLink, webContentLink, createdTime, size, thumbnailLink)"
+            ).execute()
+            return results.get("files", [])
+        except Exception as e:
+            print(f"[GoogleDrive] Error listing files: {e}")
+            return []
+
 # Singleton instance
 gdrive_manager = GoogleDriveManager()

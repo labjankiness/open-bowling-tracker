@@ -147,22 +147,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Populate summary cards
         const summary = job.summary || {};
-        document.getElementById('valReleaseVel').textContent = summary.peak_release_velocity_px_s 
-            ? Math.round(summary.peak_release_velocity_px_s) 
+        document.getElementById('valBallSpeed').textContent = summary.ball_speed_mph != null 
+            ? summary.ball_speed_mph 
             : '--';
+        document.getElementById('valBallRpm').textContent = summary.ball_rotation_rpm != null 
+            ? summary.ball_rotation_rpm 
+            : '--';
+        document.getElementById('valLaunchPoint').textContent = summary.launch_point_board || '--';
+        document.getElementById('valBreakpoint').textContent = summary.breakpoint || '--';
         document.getElementById('valSpineTilt').textContent = summary.spine_tilt_at_release_deg != null 
             ? summary.spine_tilt_at_release_deg.toFixed(1) + '°' 
             : '--';
         document.getElementById('valKneeFlex').textContent = summary.knee_flexion_at_release_deg != null 
             ? summary.knee_flexion_at_release_deg.toFixed(1) + '°' 
             : '--';
-        document.getElementById('valFrames').textContent = job.frame_count || '--';
+
+        // AI Bowling Coach Breakdown
+        const coachSection = document.getElementById('coachAdviceSection');
+        const coachList = document.getElementById('coachAdviceList');
+        if (job.coach_advice && job.coach_advice.length > 0) {
+            coachSection.classList.remove('hidden');
+            coachList.innerHTML = '';
+            job.coach_advice.forEach(tip => {
+                const card = document.createElement('div');
+                card.className = `coach-card badge-${tip.badge || 'info'}`;
+                card.innerHTML = `
+                    <div class="coach-card-top">
+                        <span class="coach-cat">${tip.category}</span>
+                        <span class="coach-status">${tip.status}</span>
+                    </div>
+                    <p class="coach-msg">${tip.message}</p>
+                `;
+                coachList.appendChild(card);
+            });
+        } else {
+            coachSection.classList.add('hidden');
+        }
 
         // Video Player
         if (job.annotated_video_url) {
             const videoElem = document.getElementById('resultVideo');
             videoElem.src = job.annotated_video_url;
             videoElem.load();
+            videoElem.play().catch(e => console.log('Autoplay deferred:', e));
             document.getElementById('btnDownloadVideo').href = job.annotated_video_url;
         }
 
@@ -345,4 +372,119 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Error saving Drive settings: ' + err.message);
         }
     });
+
+    // Library Modal
+    const btnOpenLibrary = document.getElementById('btnOpenLibrary');
+    const btnCloseLibrary = document.getElementById('btnCloseLibraryModal');
+    const libraryModal = document.getElementById('libraryModal');
+    const tabLocal = document.getElementById('tabLocal');
+    const tabDrive = document.getElementById('tabDrive');
+    const libraryListLocal = document.getElementById('libraryListLocal');
+    const libraryListDrive = document.getElementById('libraryListDrive');
+
+    if (btnOpenLibrary) {
+        btnOpenLibrary.addEventListener('click', () => {
+            libraryModal.classList.remove('hidden');
+            loadLibrary();
+        });
+    }
+
+    if (btnCloseLibrary) {
+        btnCloseLibrary.addEventListener('click', () => libraryModal.classList.add('hidden'));
+    }
+
+    if (tabLocal && tabDrive) {
+        tabLocal.addEventListener('click', () => {
+            tabLocal.classList.add('active');
+            tabDrive.classList.remove('active');
+            libraryListLocal.classList.remove('hidden');
+            libraryListDrive.classList.add('hidden');
+        });
+
+        tabDrive.addEventListener('click', () => {
+            tabDrive.classList.add('active');
+            tabLocal.classList.remove('active');
+            libraryListDrive.classList.remove('hidden');
+            libraryListLocal.classList.add('hidden');
+        });
+    }
+
+    async function loadLibrary() {
+        try {
+            const resp = await fetch('/api/library');
+            if (!resp.ok) return;
+            const data = await resp.json();
+
+            document.getElementById('countLocal').textContent = data.local_videos.length;
+            document.getElementById('countDrive').textContent = data.gdrive_videos.length;
+
+            // Render Local
+            libraryListLocal.innerHTML = '';
+            if (data.local_videos.length === 0) {
+                libraryListLocal.innerHTML = '<p class="empty-msg">No processed videos yet. Upload a clip above!</p>';
+            } else {
+                data.local_videos.forEach(vid => {
+                    const item = document.createElement('div');
+                    item.className = 'library-item';
+                    item.innerHTML = `
+                        <div class="lib-info">
+                            <span class="lib-icon">📹</span>
+                            <div>
+                                <strong>${vid.name}</strong>
+                                <small>${vid.size_mb} MB</small>
+                            </div>
+                        </div>
+                        <div class="lib-actions">
+                            <button class="btn btn-sm btn-primary btn-play-lib" data-url="${vid.url}">Play in Player</button>
+                            <a href="${vid.url}" download class="btn btn-sm btn-ghost">Download</a>
+                        </div>
+                    `;
+                    libraryListLocal.appendChild(item);
+                });
+
+                document.querySelectorAll('.btn-play-lib').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const url = e.target.getAttribute('data-url');
+                        const videoElem = document.getElementById('resultVideo');
+                        resultsSection.classList.remove('hidden');
+                        videoElem.src = url;
+                        videoElem.load();
+                        videoElem.play().catch(err => console.log('Autoplay deferred:', err));
+                        document.getElementById('btnDownloadVideo').href = url;
+                        libraryModal.classList.add('hidden');
+                        videoElem.scrollIntoView({ behavior: 'smooth' });
+                    });
+                });
+            }
+
+            // Render Drive
+            libraryListDrive.innerHTML = '';
+            if (data.gdrive_videos.length === 0) {
+                libraryListDrive.innerHTML = data.gdrive_configured 
+                    ? '<p class="empty-msg">No videos found in your target Google Drive folder.</p>'
+                    : '<p class="empty-msg">Google Drive sync is not configured yet. Click "Google Drive Sync" to connect!</p>';
+            } else {
+                data.gdrive_videos.forEach(vid => {
+                    const item = document.createElement('div');
+                    item.className = 'library-item';
+                    item.innerHTML = `
+                        <div class="lib-info">
+                            <span class="lib-icon">☁️</span>
+                            <div>
+                                <strong>${vid.name}</strong>
+                                <small>Google Drive File</small>
+                            </div>
+                        </div>
+                        <div class="lib-actions">
+                            <a href="${vid.webViewLink}" target="_blank" class="btn btn-sm btn-outline">View in Drive ↗</a>
+                        </div>
+                    `;
+                    libraryListDrive.appendChild(item);
+                });
+            }
+
+        } catch (e) {
+            console.error('Error loading library:', e);
+        }
+    }
 });

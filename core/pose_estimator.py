@@ -56,9 +56,10 @@ class PoseEstimator:
         self._drawing_utils = vision.drawing_utils
         self._ms_per_frame = 1000.0 / fps if fps > 0 else 1000.0 / 30.0
         self._next_timestamp_ms = 0
+        self._prev_raw_landmarks = None
 
     def process(self, frame_bgr: np.ndarray) -> Optional["FrameLandmarks"]:
-        """Run pose inference on one BGR frame.
+        """Run pose inference on one BGR frame with temporal smoothing.
 
         Returns None if no pose was detected in the frame.
         """
@@ -74,6 +75,17 @@ class PoseEstimator:
 
         height, width = frame_bgr.shape[:2]
         raw_landmarks = result.pose_landmarks[0]
+
+        # Temporal landmark smoothing (EMA filter) to remove jitter and glitches
+        if self._prev_raw_landmarks is not None:
+            for i, lm in enumerate(raw_landmarks):
+                prev = self._prev_raw_landmarks[i]
+                alpha = 0.70 if lm.visibility >= config.LANDMARK_VISIBILITY_THRESHOLD else 0.25
+                lm.x = alpha * lm.x + (1.0 - alpha) * prev.x
+                lm.y = alpha * lm.y + (1.0 - alpha) * prev.y
+                lm.z = alpha * lm.z + (1.0 - alpha) * prev.z
+        self._prev_raw_landmarks = raw_landmarks
+
         landmarks: Dict[int, Landmark] = {}
         for idx in config.REQUIRED_LANDMARKS:
             lm = raw_landmarks[idx]

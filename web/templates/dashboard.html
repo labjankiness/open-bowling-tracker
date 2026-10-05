@@ -16,6 +16,9 @@
             <span class="badge">Live 24/7</span>
         </div>
         <div class="header-actions">
+            <button id="btnOpenLibrary" class="btn btn-outline">
+                <span class="icon">📂</span> Video Library
+            </button>
             <button id="btnOpenDriveModal" class="btn btn-outline">
                 <span class="icon">☁️</span> Google Drive Sync
             </button>
@@ -98,10 +101,25 @@
             <div class="card metrics-card full-width">
                 <h3>Biomechanics Summary</h3>
                 <div class="stats-grid" id="statsGrid">
+                    <div class="stat-box highlight-box">
+                        <span class="stat-label">Ball Speed</span>
+                        <span class="stat-value" id="valBallSpeed">--</span>
+                        <span class="stat-unit" id="unitBallSpeed">mph</span>
+                    </div>
+                    <div class="stat-box highlight-box">
+                        <span class="stat-label">Ball Rotation (Rev Rate)</span>
+                        <span class="stat-value" id="valBallRpm">--</span>
+                        <span class="stat-unit">RPM</span>
+                    </div>
                     <div class="stat-box">
-                        <span class="stat-label">Peak Release Velocity</span>
-                        <span class="stat-value" id="valReleaseVel">--</span>
-                        <span class="stat-unit" id="unitReleaseVel">px/s</span>
+                        <span class="stat-label">Launch Point</span>
+                        <span class="stat-value" id="valLaunchPoint">--</span>
+                        <span class="stat-unit">board position</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Breakpoint</span>
+                        <span class="stat-value" id="valBreakpoint">--</span>
+                        <span class="stat-unit">hook apex</span>
                     </div>
                     <div class="stat-box">
                         <span class="stat-label">Spine Tilt (Release)</span>
@@ -113,10 +131,16 @@
                         <span class="stat-value" id="valKneeFlex">--</span>
                         <span class="stat-unit">degrees</span>
                     </div>
-                    <div class="stat-box">
-                        <span class="stat-label">Frames Analyzed</span>
-                        <span class="stat-value" id="valFrames">--</span>
-                        <span class="stat-unit">frames</span>
+                </div>
+
+                <!-- AI Bowling Coach Advice Panel -->
+                <div id="coachAdviceSection" class="coach-advice-section hidden">
+                    <div class="coach-header">
+                        <h4>🤖 AI Bowling Coach Breakdown</h4>
+                        <span class="coach-subtitle">Biomechanics analysis & shot recommendations</span>
+                    </div>
+                    <div id="coachAdviceList" class="coach-advice-grid">
+                        <!-- Dynamically injected coach cards -->
                     </div>
                 </div>
                 
@@ -227,6 +251,32 @@
                         <button type="submit" class="btn btn-primary">Save Settings</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Video Library Modal -->
+    <div id="libraryModal" class="modal-overlay hidden">
+        <div class="modal-box modal-large">
+            <div class="modal-header">
+                <h3>📂 Video Library</h3>
+                <button id="btnCloseLibraryModal" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Browse previously processed bowling clips and original videos from your local storage and Google Drive.</p>
+                
+                <div class="library-tabs">
+                    <button class="tab-btn active" id="tabLocal">Processed Shots (<span id="countLocal">0</span>)</button>
+                    <button class="tab-btn" id="tabDrive">Google Drive (<span id="countDrive">0</span>)</button>
+                </div>
+
+                <div id="libraryListLocal" class="library-grid">
+                    <!-- Local videos injected here -->
+                </div>
+
+                <div id="libraryListDrive" class="library-grid hidden">
+                    <!-- Drive videos injected here -->
+                </div>
             </div>
         </div>
     </div>

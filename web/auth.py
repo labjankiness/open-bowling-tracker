@@ -1,42 +1,42 @@
 import os
+import hmac
+import hashlib
 import secrets
-from fastapi import Request, HTTPException, status, Depends
+from fastapi import Request, HTTPException, status
 from fastapi.responses import RedirectResponse
 
 DEFAULT_SECRET_KEY = os.environ.get("BOWLING_SECRET_KEY", "bowling2026")
 SESSION_COOKIE_NAME = "bowling_auth_token"
 
-# In-memory session store (valid until server restart)
-ACTIVE_SESSIONS = set()
+def _get_signing_key() -> bytes:
+    key = os.environ.get("BOWLING_SECRET_KEY", DEFAULT_SECRET_KEY).strip()
+    return key.encode("utf-8")
 
 def verify_passcode(passcode: str) -> bool:
     expected = os.environ.get("BOWLING_SECRET_KEY", DEFAULT_SECRET_KEY)
     return secrets.compare_digest(passcode.strip(), expected.strip())
 
 def create_session() -> str:
-    token = secrets.token_hex(32)
-    ACTIVE_SESSIONS.add(token)
-    return token
+    """Creates a persistent HMAC token based on the secret key so sessions survive server reloads."""
+    return hmac.new(_get_signing_key(), b"bowling_authenticated_session", hashlib.sha256).hexdigest()
 
 def revoke_session(token: str):
-    ACTIVE_SESSIONS.discard(token)
+    pass
 
 def is_authenticated(request: Request) -> bool:
     token = request.cookies.get(SESSION_COOKIE_NAME)
-    if token and token in ACTIVE_SESSIONS:
-        return True
-    return False
+    if not token:
+        return False
+    expected = hmac.new(_get_signing_key(), b"bowling_authenticated_session", hashlib.sha256).hexdigest()
+    return secrets.compare_digest(token, expected)
 
 def require_auth(request: Request):
-    """Dependency for API endpoints or HTML pages that require authentication."""
     if not is_authenticated(request):
-        # If it's an API call, return 401
         if request.url.path.startswith("/api/"):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Authentication required"
             )
-        # If it's a page request, redirect to login
         raise HTTPException(
             status_code=status.HTTP_307_TEMPORARY_REDIRECT,
             headers={"Location": "/login"}

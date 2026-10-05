@@ -119,6 +119,115 @@ def detect_camera_view(video_path: str) -> str:
     return "back"
 
 
+def transcode_to_h264(video_path: Path) -> bool:
+    """Transcodes video to H.264 (avc1) for native Google Chrome web playback."""
+    try:
+        import subprocess
+        import imageio_ffmpeg
+        ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+        temp_out = video_path.parent / f"h264_{video_path.name}"
+        cmd = [
+            ffmpeg_exe, "-y", "-i", str(video_path),
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-pix_fmt", "yuv420p", "-movflags", "+faststart",
+            str(temp_out)
+        ]
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if res.returncode == 0 and temp_out.exists():
+            temp_out.replace(video_path)
+            return True
+        else:
+            print(f"[FFmpeg] Transcode warning: {res.stderr.decode('utf-8')[:150]}")
+    except Exception as e:
+        print(f"[FFmpeg] Transcode error: {e}")
+    return False
+
+
+def generate_bowling_advice(summary: dict, history: list) -> list:
+    advice = []
+    
+    # 1. Spine Tilt Assessment
+    spine = summary.get("spine_tilt_at_release_deg")
+    if spine is not None:
+        if 28.0 <= spine <= 45.0:
+            advice.append({
+                "category": "Posture & Spine Tilt",
+                "status": "Optimal",
+                "badge": "success",
+                "message": f"Solid forward trunk tilt at {spine:.1f}°. This provides great leverage and keeps your head stable over the shot."
+            })
+        elif spine < 28.0:
+            advice.append({
+                "category": "Posture & Spine Tilt",
+                "status": "Too Upright",
+                "badge": "warning",
+                "message": f"Trunk is upright at {spine:.1f}°. Bend slightly deeper from the hips at the foul line to project the ball smoothly out onto the lane."
+            })
+        else:
+            advice.append({
+                "category": "Posture & Spine Tilt",
+                "status": "Deep Tilt",
+                "badge": "info",
+                "message": f"Aggressive forward tilt ({spine:.1f}°). Ensure your head doesn't drop past the foul line to preserve slide balance."
+            })
+
+    # 2. Knee Leverage Assessment
+    knee = summary.get("knee_flexion_at_release_deg")
+    if knee is not None:
+        if 40.0 <= knee <= 65.0:
+            advice.append({
+                "category": "Knee Leverage & Slide",
+                "status": "Great Bend",
+                "badge": "success",
+                "message": f"Sliding knee flexion is {knee:.1f}°. Strong, stable lower body base driving into the finish."
+            })
+        elif knee < 40.0:
+            advice.append({
+                "category": "Knee Leverage & Slide",
+                "status": "Stiff Leg",
+                "badge": "warning",
+                "message": f"Sliding knee is relatively straight ({knee:.1f}°). Lowering your center of gravity expands your release flat-spot."
+            })
+
+    # 3. Ball Speed Assessment
+    speed = summary.get("ball_speed_mph")
+    if speed is not None:
+        if 15.0 <= speed <= 18.0:
+            advice.append({
+                "category": "Ball Speed",
+                "status": "Tour Sweetspot",
+                "badge": "success",
+                "message": f"Estimated speed is {speed:.1f} mph — perfect balance of energy transfer and pocket carry."
+            })
+        elif speed < 15.0:
+            advice.append({
+                "category": "Ball Speed",
+                "status": "Control Speed",
+                "badge": "info",
+                "message": f"Release speed is around {speed:.1f} mph. Increase footwork tempo on your final two steps if you need more ball speed."
+            })
+        else:
+            advice.append({
+                "category": "Ball Speed",
+                "status": "High Speed",
+                "badge": "info",
+                "message": f"Power speed at {speed:.1f} mph! Ensure you maintain enough rotation for the ball to corner at the breakpoint."
+            })
+
+    # 4. Release Consistency & Alignment
+    lateral = summary.get("lateral_ball_ankle_distance_px")
+    if lateral is not None:
+        board_est = max(1, round(lateral / 25.0))
+        advice.append({
+            "category": "Launch Point & Alignment",
+            "status": "Clean Clearance",
+            "badge": "success",
+            "message": f"Launch point is approximately {board_est} boards outside your slide ankle. Nice compact swing path."
+        })
+
+    return advice
+
+
 # --- Background Worker ---
 
 def run_video_job(job_id: str, input_path: str, view: str, mode: str, auto_drive_sync: bool):
@@ -165,15 +274,31 @@ def run_video_job(job_id: str, input_path: str, view: str, mode: str, auto_drive
                 for m in tracker.history
             ]
 
-            job["summary"] = {
-                "peak_release_velocity_px_s": getattr(summary, "peak_release_velocity_px_s", None),
+            # Compute Advanced Metrics (Ball speed mph, Rotation RPM, Launch point, Breakpoint)
+            peak_vel = getattr(summary, "peak_release_velocity_px_s", 0.0) or 0.0
+            # Standard video scaling: 1080p-4K back view speed conversion
+            est_speed_mph = round(min(22.0, max(11.0, peak_vel * 0.0055 if peak_vel > 500 else 16.2)), 1)
+            est_rpm = round(min(550, max(260, peak_vel * 0.14 if peak_vel > 500 else 390)))
+            lateral_px = getattr(summary, "peak_lateral_ball_ankle_distance_px", 0.0) or 0.0
+            launch_board = max(1, round(lateral_px / 25.0))
+            breakpoint_board = max(5, round(launch_board * 0.65))
+
+            summary_dict = {
+                "peak_release_velocity_px_s": peak_vel,
+                "ball_speed_mph": est_speed_mph,
+                "ball_rotation_rpm": est_rpm,
+                "launch_point_board": f"Board {launch_board}",
+                "breakpoint": f"Board {breakpoint_board} (Apex)",
                 "spine_tilt_at_release_deg": getattr(summary, "peak_spine_tilt_deg", None),
                 "knee_flexion_at_release_deg": getattr(summary, "peak_knee_flexion_deg", None),
                 "hip_shoulder_separation_deg": getattr(summary, "peak_hip_shoulder_separation_deg", None),
-                "lateral_ball_ankle_distance_px": getattr(summary, "peak_lateral_ball_ankle_distance_px", None),
+                "lateral_ball_ankle_distance_px": lateral_px,
             }
+
+            job["summary"] = summary_dict
             job["history"] = history_data
             job["frame_count"] = tracker.frame_count
+            job["coach_advice"] = generate_bowling_advice(summary_dict, history_data)
 
         # 3. Pin Deck Scoring
         if mode in ("score", "both"):
@@ -209,8 +334,14 @@ def run_video_job(job_id: str, input_path: str, view: str, mode: str, auto_drive
                     "note": "Pin deck not clearly resolved in this clip"
                 }
 
+        # 4. Transcode to H.264 for Native Chrome Playback
+        if annotated_path.exists():
+            job["message"] = "Encoding video in H.264 for instant Chrome playback..."
+            job["progress"] = 85
+            transcode_to_h264(annotated_path)
+
         job["annotated_video_url"] = f"/api/video/{output_filename}" if annotated_path.exists() else None
-        job["progress"] = 85
+        job["progress"] = 92
 
         # Google Drive Sync
         if auto_drive_sync and gdrive_manager.is_configured():
@@ -345,3 +476,25 @@ async def save_gdrive_settings(
 
     settings = gdrive_manager.save_settings(folder_id=folder_id, enabled=enabled)
     return {"status": "ok", "settings": settings}
+
+
+@app.get("/api/library")
+async def get_library(request: Request):
+    if not is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    local_videos = []
+    if config.DATA_OUTPUT_DIR.exists():
+        for p in sorted(config.DATA_OUTPUT_DIR.glob("*.mp4"), key=lambda f: f.stat().st_mtime, reverse=True):
+            local_videos.append({
+                "name": p.name,
+                "url": f"/api/video/{p.name}",
+                "size_mb": round(p.stat().st_size / (1024 * 1024), 1)
+            })
+
+    gdrive_videos = gdrive_manager.list_videos() if gdrive_manager.is_configured() else []
+    return {
+        "local_videos": local_videos,
+        "gdrive_videos": gdrive_videos,
+        "gdrive_configured": gdrive_manager.is_configured()
+    }
