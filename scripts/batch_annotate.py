@@ -127,6 +127,18 @@ def clean_output_duplicates(output_dir: Path):
         print("No duplicate files found in output directory.\n")
 
 
+STATUS_FILE = config.PROJECT_ROOT / "data" / "batch_status.json"
+
+def write_batch_status(data: dict):
+    try:
+        temp = STATUS_FILE.with_suffix(".tmp")
+        with open(temp, "w") as f:
+            json.dump(data, f, indent=2)
+        temp.replace(STATUS_FILE)
+    except Exception:
+        pass
+
+
 def batch_annotate_videos(
     training_dir: Path = Path("/mnt/c/Users/Generate(_)/OneDrive/Videos/Bowling Videos for training"),
     output_dir: Path = config.DATA_OUTPUT_DIR,
@@ -187,16 +199,43 @@ def batch_annotate_videos(
 
     if not pending_videos:
         print("🎉 All training videos have already been annotated! Nothing to repeat.")
+        write_batch_status({
+            "is_running": False,
+            "total_videos": len(all_videos),
+            "already_annotated": len(all_videos),
+            "pending_count": 0,
+            "percent": 100.0,
+            "current_video": "All Complete",
+            "completed": True,
+            "updated_at": time.time(),
+        })
         return
 
     processed_count = 0
     failed_count = 0
     start_all = time.time()
+    latest_stats = None
 
     for i, video_path in enumerate(pending_videos, 1):
         clean_stem = re.sub(r"\.(mp4|mov|m4v)+$", "", video_path.stem, flags=re.I)
         target_name = f"annotated_{clean_stem}.mp4"
         target_path = output_dir / target_name
+
+        current_annotated_total = len(skipped_videos) + processed_count
+        pct = round((current_annotated_total / len(all_videos)) * 100, 1)
+
+        write_batch_status({
+            "is_running": True,
+            "total_videos": len(all_videos),
+            "already_annotated": current_annotated_total,
+            "pending_count": len(all_videos) - current_annotated_total,
+            "percent": pct,
+            "current_index": i,
+            "pending_total": len(pending_videos),
+            "current_video": video_path.name,
+            "latest_stats": latest_stats,
+            "updated_at": time.time(),
+        })
 
         print(f"[{i}/{len(pending_videos)}] 📹 Processing: {video_path.name}")
         t0 = time.time()
@@ -257,13 +296,40 @@ def batch_annotate_videos(
             knee_flex = getattr(summary, "peak_knee_flexion_deg", 0.0)
             spine_tilt = getattr(summary, "peak_spine_tilt_deg", 0.0)
 
+            latest_stats = {
+                "video_name": target_name,
+                "speed_mph": est_speed_mph,
+                "rpm": est_rpm,
+                "multiplier": multiplier,
+                "knee_deg": round(knee_flex, 1),
+                "spine_deg": round(spine_tilt, 1),
+                "frames": tracker.frame_count,
+                "duration_s": round(clip_dur, 1)
+            }
+
+            processed_count += 1
+            new_annotated_total = len(skipped_videos) + processed_count
+            new_pct = round((new_annotated_total / len(all_videos)) * 100, 1)
+
+            write_batch_status({
+                "is_running": True,
+                "total_videos": len(all_videos),
+                "already_annotated": new_annotated_total,
+                "pending_count": len(all_videos) - new_annotated_total,
+                "percent": new_pct,
+                "current_index": i,
+                "pending_total": len(pending_videos),
+                "current_video": video_path.name,
+                "latest_stats": latest_stats,
+                "updated_at": time.time(),
+            })
+
             print(
                 f"    ✓ Annotated -> {target_name} ({tracker.frame_count} frames, {clip_dur:.1f}s)\n"
                 f"    ⚡ Speed: {est_speed_mph} mph | Revs: {est_rpm} RPM ({multiplier:g}x SloMo) | "
                 f"Slide Knee: {knee_flex:.1f}° | Spine: {spine_tilt:.1f}°\n"
                 f"    ⏱ Total Time: {total_shot_time:.1f}s (Track: {elapsed_tracking:.1f}s, Encode: {elapsed_transcode:.1f}s)\n"
             )
-            processed_count += 1
 
         except Exception as e:
             failed_count += 1
@@ -273,6 +339,18 @@ def batch_annotate_videos(
                     target_path.unlink()
                 except Exception:
                     pass
+
+    write_batch_status({
+        "is_running": False,
+        "total_videos": len(all_videos),
+        "already_annotated": len(skipped_videos) + processed_count,
+        "pending_count": max(0, len(all_videos) - (len(skipped_videos) + processed_count)),
+        "percent": round(((len(skipped_videos) + processed_count) / len(all_videos)) * 100, 1),
+        "current_video": "All Complete" if failed_count == 0 else "Finished with warnings",
+        "latest_stats": latest_stats,
+        "completed": True,
+        "updated_at": time.time(),
+    })
 
     total_time_min = (time.time() - start_all) / 60.0
     print("=" * 65)

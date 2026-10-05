@@ -629,4 +629,135 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error loading library:', e);
         }
     }
+
+    // --- Live Batch Annotation Progress Monitor ---
+    const batchProgressBarFill = document.getElementById('batchProgressBarFill');
+    const batchCountText = document.getElementById('batchCountText');
+    const batchPercentText = document.getElementById('batchPercentText');
+    const batchPulseDot = document.getElementById('batchPulseDot');
+    const batchStatusBadge = document.getElementById('batchStatusBadge');
+    const batchCurrentVideo = document.getElementById('batchCurrentVideo');
+    const batchLatestShot = document.getElementById('batchLatestShot');
+    const btnToggleBatch = document.getElementById('btnToggleBatch');
+    const btnViewBatchLibrary = document.getElementById('btnViewBatchLibrary');
+
+    let isBatchRunning = false;
+
+    async function pollBatchStatus() {
+        try {
+            const resp = await fetch('/api/batch-status');
+            if (!resp.ok) return;
+            const data = await resp.json();
+
+            isBatchRunning = data.is_running;
+
+            // Update Progress Bar
+            const pct = data.percent || 0;
+            if (batchProgressBarFill) {
+                batchProgressBarFill.style.width = `${pct}%`;
+            }
+            if (batchPercentText) {
+                batchPercentText.textContent = `${pct}%`;
+            }
+            if (batchCountText) {
+                batchCountText.textContent = `${data.annotated_count || 0} / ${data.total_training || 0} Videos Annotated`;
+            }
+
+            // Update Badge & Pulse Dot
+            if (data.is_running) {
+                if (batchPulseDot) batchPulseDot.textContent = '🟢';
+                if (batchStatusBadge) {
+                    batchStatusBadge.textContent = 'Processing in Background';
+                    batchStatusBadge.className = 'batch-badge active';
+                }
+                if (btnToggleBatch) {
+                    btnToggleBatch.textContent = '⏸ Pause';
+                    btnToggleBatch.className = 'btn btn-sm btn-outline';
+                }
+            } else if (pct >= 100) {
+                if (batchPulseDot) batchPulseDot.textContent = '🎉';
+                if (batchStatusBadge) {
+                    batchStatusBadge.textContent = 'All Videos Completed';
+                    batchStatusBadge.className = 'batch-badge completed';
+                }
+                if (btnToggleBatch) {
+                    btnToggleBatch.textContent = '🔄 Re-Scan';
+                    btnToggleBatch.className = 'btn btn-sm btn-outline';
+                }
+            } else {
+                if (batchPulseDot) batchPulseDot.textContent = '🟡';
+                if (batchStatusBadge) {
+                    batchStatusBadge.textContent = 'Paused / Idle';
+                    batchStatusBadge.className = 'batch-badge paused';
+                }
+                if (btnToggleBatch) {
+                    btnToggleBatch.textContent = '▶ Resume';
+                    btnToggleBatch.className = 'btn btn-sm btn-primary';
+                }
+            }
+
+            // Current Video
+            if (batchCurrentVideo) {
+                if (data.current_video) {
+                    batchCurrentVideo.textContent = data.current_video;
+                } else if (data.is_running) {
+                    batchCurrentVideo.textContent = 'Annotating clips...';
+                } else {
+                    batchCurrentVideo.textContent = 'Idle';
+                }
+            }
+
+            // Latest Shot Stats
+            if (batchLatestShot) {
+                if (data.latest_stats) {
+                    const s = data.latest_stats;
+                    batchLatestShot.textContent = `${s.speed_mph || '--'} mph • ${s.rpm || '--'} RPM • Knee: ${s.knee_deg || '--'}° • Spine: ${s.spine_deg || '--'}°`;
+                } else if (data.latest_annotated) {
+                    batchLatestShot.textContent = `${data.latest_annotated.name} (${data.latest_annotated.size_mb} MB)`;
+                } else {
+                    batchLatestShot.textContent = '--';
+                }
+            }
+
+        } catch (e) {
+            console.error('Error polling batch status:', e);
+        }
+    }
+
+    // Toggle Start / Stop Batch
+    if (btnToggleBatch) {
+        btnToggleBatch.addEventListener('click', async () => {
+            btnToggleBatch.setAttribute('disabled', 'true');
+            try {
+                const endpoint = isBatchRunning ? '/api/batch-annotate/stop' : '/api/batch-annotate/start';
+                await fetch(endpoint, { method: 'POST' });
+                await pollBatchStatus();
+            } catch (err) {
+                console.error('Error toggling batch:', err);
+            } finally {
+                btnToggleBatch.removeAttribute('disabled');
+            }
+        });
+    }
+
+    // View in Library Button
+    if (btnViewBatchLibrary) {
+        btnViewBatchLibrary.addEventListener('click', () => {
+            const libraryModal = document.getElementById('libraryModal');
+            if (libraryModal) {
+                libraryModal.classList.remove('hidden');
+                loadLibrary();
+                // Switch to Local / Processed tab
+                const tabLocal = document.getElementById('tabLocal');
+                const libraryListLocal = document.getElementById('libraryListLocal');
+                if (tabLocal && libraryListLocal) {
+                    switchLibraryTab(tabLocal, libraryListLocal);
+                }
+            }
+        });
+    }
+
+    // Poll batch status every 2.5 seconds
+    pollBatchStatus();
+    setInterval(pollBatchStatus, 2500);
 });

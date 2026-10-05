@@ -29,6 +29,47 @@
     </header>
 
     <main class="container">
+        <!-- Live Batch Video Annotation Progress Bar -->
+        <section id="batchProgressCard" class="card batch-card">
+            <div class="batch-header">
+                <div class="batch-title-area">
+                    <span class="batch-pulse-icon" id="batchPulseDot">🟢</span>
+                    <div>
+                        <div class="batch-title-row">
+                            <h3 id="batchHeaderTitle">Batch Training Video Annotation</h3>
+                            <span id="batchStatusBadge" class="batch-badge active">Processing in Background</span>
+                        </div>
+                        <p id="batchSubtitle" class="batch-subtitle">Auto-annotating all training clips (lefty 2-handed, slo-mo calibrated)...</p>
+                    </div>
+                </div>
+                <div class="batch-actions">
+                    <button type="button" id="btnToggleBatch" class="btn btn-sm btn-outline">Pause</button>
+                    <button type="button" id="btnViewBatchLibrary" class="btn btn-sm btn-primary">📂 View Processed Shots</button>
+                </div>
+            </div>
+
+            <div class="batch-progress-wrapper">
+                <div class="batch-progress-bar">
+                    <div id="batchProgressBarFill" class="batch-progress-fill" style="width: 0%;"></div>
+                </div>
+                <div class="batch-progress-stats">
+                    <span id="batchCountText">0 / 0 Videos Annotated</span>
+                    <strong id="batchPercentText">0%</strong>
+                </div>
+            </div>
+
+            <div id="batchLiveInfo" class="batch-live-info">
+                <div class="batch-stat-item">
+                    <span class="batch-label">Currently Processing:</span>
+                    <span id="batchCurrentVideo" class="batch-value mono">Scanning...</span>
+                </div>
+                <div class="batch-stat-item">
+                    <span class="batch-label">Latest Shot Result:</span>
+                    <span id="batchLatestShot" class="batch-value">--</span>
+                </div>
+            </div>
+        </section>
+
         <!-- Upload Section -->
         <section class="card upload-card">
             <div class="card-header">

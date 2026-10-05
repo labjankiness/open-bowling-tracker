@@ -3,6 +3,7 @@ import uuid
 import json
 import shutil
 import asyncio
+import subprocess
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -651,6 +652,81 @@ async def get_library(request: Request):
         "gdrive_videos": gdrive_videos,
         "gdrive_configured": gdrive_manager.is_configured()
     }
+
+
+@app.get("/api/batch-status")
+async def get_batch_status(request: Request):
+    """Provides live status and percentage of batch training video annotation."""
+    if not is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    training_vids = [p for p in TRAINING_VIDEOS_DIR.glob("*.*") if p.suffix.lower() in (".mp4", ".mov", ".m4v")] if TRAINING_VIDEOS_DIR.exists() else []
+    total_training = len(training_vids)
+
+    annotated_vids = sorted(config.DATA_OUTPUT_DIR.glob("*.mp4"), key=lambda f: f.stat().st_mtime, reverse=True) if config.DATA_OUTPUT_DIR.exists() else []
+    annotated_count = len(annotated_vids)
+
+    # Check if batch process is currently running
+    res = subprocess.run(["pgrep", "-f", "batch_annotate.py"], stdout=subprocess.PIPE, text=True)
+    is_running = (res.returncode == 0 and len(res.stdout.strip()) > 0)
+
+    pct = min(100.0, round((annotated_count / total_training) * 100, 1)) if total_training > 0 else 0
+
+    latest_item = None
+    if annotated_vids:
+        latest = annotated_vids[0]
+        latest_item = {
+            "name": latest.name,
+            "size_mb": round(latest.stat().st_size / (1024 * 1024), 1),
+            "thumbnail_url": f"/api/thumbnail/{latest.name}",
+            "url": f"/api/video/{latest.name}",
+        }
+
+    status_file = config.PROJECT_ROOT / "data" / "batch_status.json"
+    extra_info = {}
+    if status_file.exists():
+        try:
+            with open(status_file, "r") as f:
+                extra_info = json.load(f)
+        except Exception:
+            pass
+
+    return {
+        "is_running": is_running,
+        "total_training": total_training,
+        "annotated_count": annotated_count,
+        "pending_count": max(0, total_training - annotated_count),
+        "percent": pct,
+        "latest_annotated": latest_item,
+        "current_video": extra_info.get("current_video"),
+        "latest_stats": extra_info.get("latest_stats"),
+    }
+
+
+@app.post("/api/batch-annotate/start")
+async def start_batch_annotation(request: Request):
+    """Starts or resumes batch video annotation in the background."""
+    if not is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    res = subprocess.run(["pgrep", "-f", "batch_annotate.py"], stdout=subprocess.PIPE, text=True)
+    if res.returncode == 0 and len(res.stdout.strip()) > 0:
+        return {"status": "already_running"}
+
+    script_path = config.PROJECT_ROOT / "scripts" / "batch_annotate.py"
+    venv_python = config.PROJECT_ROOT / "venv" / "bin" / "python"
+    subprocess.Popen([str(venv_python), str(script_path)])
+    return {"status": "started"}
+
+
+@app.post("/api/batch-annotate/stop")
+async def stop_batch_annotation(request: Request):
+    """Pauses background batch annotation."""
+    if not is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    subprocess.run(["pkill", "-f", "batch_annotate.py"])
+    return {"status": "stopped"}
 
 
 @app.api_route("/api/training-video/{filename}", methods=["GET", "HEAD"])

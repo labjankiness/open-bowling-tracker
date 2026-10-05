@@ -87,6 +87,156 @@ body {
     gap: 28px;
 }
 
+/* Batch Annotation Progress Card */
+.batch-card {
+    background: linear-gradient(145deg, #101726, #0d121c);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    margin-bottom: 24px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(59, 130, 246, 0.08);
+}
+
+.batch-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+.batch-title-area {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.batch-pulse-icon {
+    font-size: 1.4rem;
+    animation: pulseDot 2s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.15); opacity: 0.7; }
+}
+
+.batch-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.batch-title-row h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #f8fafc;
+    margin: 0;
+}
+
+.batch-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+}
+
+.batch-badge.active {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.batch-badge.paused {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.batch-badge.completed {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.batch-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 3px;
+}
+
+.batch-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.batch-progress-wrapper {
+    margin-top: 18px;
+}
+
+.batch-progress-bar {
+    width: 100%;
+    height: 12px;
+    background: #1e293b;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.batch-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #10b981);
+    border-radius: 6px;
+    transition: width 0.5s ease-in-out;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+}
+
+.batch-progress-stats {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 0.85rem;
+    color: #94a3b8;
+}
+
+.batch-progress-stats strong {
+    color: #34d399;
+    font-family: var(--font-mono);
+}
+
+.batch-live-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-top: 14px;
+    padding: 10px 14px;
+    background: rgba(11, 16, 27, 0.6);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.batch-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+}
+
+.batch-label {
+    color: var(--text-muted);
+}
+
+.batch-value {
+    color: #f1f5f9;
+    font-weight: 500;
+}
+
+.batch-value.mono {
+    font-family: var(--font-mono);
+    color: #93c5fd;
+}
+
 /* Cards */
 .card {
     background: var(--card-bg);
