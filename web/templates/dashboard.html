@@ -88,6 +88,17 @@
                     </div>
 
                     <div class="control-group">
+                        <label for="videoSpeed">Capture Speed / Slo-Mo</label>
+                        <select id="videoSpeed" name="speed_factor">
+                            <option value="auto" selected>✨ Auto-Detect (Auto-SloMo)</option>
+                            <option value="4">4x Slow-Mo (240 FPS Phone Slo-Mo)</option>
+                            <option value="2">2x Slow-Mo (120 FPS)</option>
+                            <option value="1">1x Normal Speed (Real-Time)</option>
+                            <option value="8">8x Ultra Slow-Mo (480 FPS)</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
                         <label for="autoDriveSync">Google Drive Sync</label>
                         <div class="toggle-wrapper">
                             <input type="checkbox" id="autoDriveSync" checked>

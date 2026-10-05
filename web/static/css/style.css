@@ -683,9 +683,10 @@ select:focus, input:focus {
     color: #cbd5e1;
 }
 
-/* Library Modal & Items */
+/* Library Modal & Cards */
 .modal-large {
-    max-width: 680px;
+    max-width: 860px;
+    width: 92vw;
 }
 
 .library-tabs {
@@ -694,6 +695,7 @@ select:focus, input:focus {
     margin-bottom: 18px;
     border-bottom: 1px solid var(--card-border);
     padding-bottom: 10px;
+    overflow-x: auto;
 }
 
 .tab-btn {
@@ -706,6 +708,7 @@ select:focus, input:focus {
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: all 0.2s;
+    white-space: nowrap;
 }
 
 .tab-btn.active {
@@ -717,44 +720,151 @@ select:focus, input:focus {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    max-height: 380px;
+    max-height: 480px;
     overflow-y: auto;
+    padding-right: 4px;
 }
 
-.library-item {
+.library-card {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
+    gap: 14px;
     background: #0f172a;
-    padding: 12px 16px;
+    padding: 10px 14px;
     border-radius: var(--radius-md);
     border: 1px solid var(--card-border);
+    transition: border-color 0.2s, background 0.2s;
 }
 
-.lib-info {
+.library-card:hover {
+    border-color: #3b82f6;
+    background: #141f33;
+}
+
+.lib-card-left {
+    flex-shrink: 0;
+}
+
+.lib-thumb-wrapper {
+    position: relative;
+    width: 110px;
+    height: 68px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #1e293b;
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.lib-icon {
-    font-size: 1.6rem;
-}
-
-.lib-info strong {
+.lib-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
     display: block;
-    font-size: 0.92rem;
-    color: #f1f5f9;
 }
 
-.lib-info small {
+.lib-thumb-placeholder {
+    font-size: 1.6rem;
     color: var(--text-muted);
-    font-size: 0.78rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
 }
 
-.lib-actions {
+.lib-thumb-cloud {
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.cloud-icon {
+    font-size: 1.8rem;
+}
+
+.thumb-duration-badge {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    background: rgba(0, 0, 0, 0.82);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.3px;
+}
+
+.lib-card-body {
+    flex: 1;
+    min-width: 0;
     display: flex;
-    gap: 8px;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.lib-card-title {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #f8fafc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lib-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.lib-meta-tag {
+    font-size: 0.74rem;
+    color: #94a3b8;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.lib-meta-tag.badge-annotated {
+    background: rgba(16, 185, 129, 0.15);
+    color: #6ee7b7;
+    border-color: rgba(16, 185, 129, 0.3);
+    font-weight: 600;
+}
+
+.lib-meta-tag.loc-tag {
+    background: rgba(245, 158, 11, 0.12);
+    color: #fcd34d;
+    border-color: rgba(245, 158, 11, 0.25);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.lib-meta-tag.loc-tag:hover {
+    background: rgba(245, 158, 11, 0.25);
+    color: #fff;
+    border-color: rgba(245, 158, 11, 0.5);
+}
+
+.lib-location-row {
+    margin-top: 2px;
+}
+
+.lib-card-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-shrink: 0;
 }
 
 .empty-msg {

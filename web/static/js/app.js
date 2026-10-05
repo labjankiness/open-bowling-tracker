@@ -70,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('view', document.getElementById('cameraView').value);
         formData.append('handedness', document.getElementById('bowlerHandedness').value);
         formData.append('style', document.getElementById('deliveryStyle').value);
+        formData.append('speed_factor', document.getElementById('videoSpeed') ? document.getElementById('videoSpeed').value : 'auto');
         formData.append('mode', document.getElementById('analysisMode').value);
         formData.append('auto_drive_sync', document.getElementById('autoDriveSync').checked);
 
@@ -429,6 +430,7 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('view', document.getElementById('cameraView').value);
         formData.append('handedness', document.getElementById('bowlerHandedness').value);
         formData.append('style', document.getElementById('deliveryStyle').value);
+        formData.append('speed_factor', document.getElementById('videoSpeed') ? document.getElementById('videoSpeed').value : 'auto');
         formData.append('mode', document.getElementById('analysisMode').value);
         formData.append('auto_drive_sync', document.getElementById('autoDriveSync').checked);
 
@@ -476,20 +478,41 @@ document.addEventListener('DOMContentLoaded', () => {
                     libraryListTraining.innerHTML = '<p class="empty-msg">No videos found in the connected training drive.</p>';
                 } else {
                     trainingList.forEach(vid => {
+                        const meta = vid.metadata || {};
+                        const dateStr = meta.date || 'Unknown Date';
+                        const timeStr = meta.time || '';
+                        const durStr = meta.duration_str || '';
+                        const resStr = meta.resolution || '';
+                        const loc = meta.location;
+
+                        let locationBadge = '';
+                        if (loc && loc.maps_url) {
+                            locationBadge = `<a href="${loc.maps_url}" target="_blank" class="lib-meta-tag loc-tag" title="Open GPS Location in Google Maps">📍 ${loc.formatted}</a>`;
+                        }
+
                         const item = document.createElement('div');
-                        item.className = 'library-item';
+                        item.className = 'library-card';
                         item.innerHTML = `
-                            <div class="lib-info">
-                                <span class="lib-icon">🎳</span>
-                                <div>
-                                    <strong>${vid.name}</strong>
-                                    <small>${vid.size_mb} MB • Connected Training Drive</small>
+                            <div class="lib-card-left">
+                                <div class="lib-thumb-wrapper">
+                                    <img src="${vid.thumbnail_url}" class="lib-thumb" loading="lazy" alt="Preview" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                                    <div class="lib-thumb-placeholder" style="display:none;">🎳</div>
+                                    ${durStr ? `<span class="thumb-duration-badge">${durStr}</span>` : ''}
                                 </div>
                             </div>
-                            <div class="lib-actions">
-                                <button class="btn btn-sm btn-primary btn-analyze-training" data-filename="${vid.name}">⚡ Analyze Shot</button>
-                                <button class="btn btn-sm btn-outline btn-play-lib" data-url="${vid.url}">▶️ Play</button>
-                                <a href="${vid.url}" download class="btn btn-sm btn-ghost">Download</a>
+                            <div class="lib-card-body">
+                                <div class="lib-card-title" title="${vid.name}">${vid.name}</div>
+                                <div class="lib-meta-row">
+                                    <span class="lib-meta-tag">📅 ${dateStr} ${timeStr}</span>
+                                    <span class="lib-meta-tag">💾 ${vid.size_mb} MB</span>
+                                    ${resStr ? `<span class="lib-meta-tag">🎥 ${resStr}</span>` : ''}
+                                </div>
+                                ${locationBadge ? `<div class="lib-location-row">${locationBadge}</div>` : ''}
+                            </div>
+                            <div class="lib-card-actions">
+                                <button class="btn btn-sm btn-primary btn-analyze-training" data-filename="${vid.name}" title="Analyze mechanics & compute metrics">⚡ Analyze</button>
+                                <button class="btn btn-sm btn-outline btn-play-lib" data-url="${vid.url}" title="Play in Player">▶️ Play</button>
+                                <a href="${vid.url}" download class="btn btn-sm btn-ghost" title="Download video file">⬇️</a>
                             </div>
                         `;
                         libraryListTraining.appendChild(item);
@@ -512,19 +535,41 @@ document.addEventListener('DOMContentLoaded', () => {
                     libraryListLocal.innerHTML = '<p class="empty-msg">No processed videos yet. Upload a clip above!</p>';
                 } else {
                     localList.forEach(vid => {
+                        const meta = vid.metadata || {};
+                        const dateStr = meta.date || 'Unknown Date';
+                        const timeStr = meta.time || '';
+                        const durStr = meta.duration_str || '';
+                        const resStr = meta.resolution || '';
+                        const loc = meta.location;
+
+                        let locationBadge = '';
+                        if (loc && loc.maps_url) {
+                            locationBadge = `<a href="${loc.maps_url}" target="_blank" class="lib-meta-tag loc-tag" title="Open GPS Location in Google Maps">📍 ${loc.formatted}</a>`;
+                        }
+
                         const item = document.createElement('div');
-                        item.className = 'library-item';
+                        item.className = 'library-card';
                         item.innerHTML = `
-                            <div class="lib-info">
-                                <span class="lib-icon">📹</span>
-                                <div>
-                                    <strong>${vid.name}</strong>
-                                    <small>${vid.size_mb} MB • Processed Analysis</small>
+                            <div class="lib-card-left">
+                                <div class="lib-thumb-wrapper">
+                                    <img src="${vid.thumbnail_url}" class="lib-thumb" loading="lazy" alt="Preview" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                                    <div class="lib-thumb-placeholder" style="display:none;">📹</div>
+                                    ${durStr ? `<span class="thumb-duration-badge">${durStr}</span>` : ''}
                                 </div>
                             </div>
-                            <div class="lib-actions">
-                                <button class="btn btn-sm btn-primary btn-play-lib" data-url="${vid.url}">Play in Player</button>
-                                <a href="${vid.url}" download class="btn btn-sm btn-ghost">Download</a>
+                            <div class="lib-card-body">
+                                <div class="lib-card-title" title="${vid.name}">${vid.name}</div>
+                                <div class="lib-meta-row">
+                                    <span class="lib-meta-tag badge-annotated">🎯 AI Annotated</span>
+                                    <span class="lib-meta-tag">📅 ${dateStr} ${timeStr}</span>
+                                    <span class="lib-meta-tag">💾 ${vid.size_mb} MB</span>
+                                    ${resStr ? `<span class="lib-meta-tag">🎥 ${resStr}</span>` : ''}
+                                </div>
+                                ${locationBadge ? `<div class="lib-location-row">${locationBadge}</div>` : ''}
+                            </div>
+                            <div class="lib-card-actions">
+                                <button class="btn btn-sm btn-primary btn-play-lib" data-url="${vid.url}">▶️ Play in Player</button>
+                                <a href="${vid.url}" download class="btn btn-sm btn-ghost" title="Download annotated video">⬇️</a>
                             </div>
                         `;
                         libraryListLocal.appendChild(item);
@@ -558,16 +603,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     driveList.forEach(vid => {
                         const item = document.createElement('div');
-                        item.className = 'library-item';
+                        item.className = 'library-card library-card-drive';
                         item.innerHTML = `
-                            <div class="lib-info">
-                                <span class="lib-icon">☁️</span>
-                                <div>
-                                    <strong>${vid.name}</strong>
-                                    <small>Google Drive File</small>
+                            <div class="lib-card-left">
+                                <div class="lib-thumb-wrapper lib-thumb-cloud">
+                                    <span class="cloud-icon">☁️</span>
                                 </div>
                             </div>
-                            <div class="lib-actions">
+                            <div class="lib-card-body">
+                                <div class="lib-card-title">${vid.name}</div>
+                                <div class="lib-meta-row">
+                                    <span class="lib-meta-tag">Google Drive Cloud File</span>
+                                </div>
+                            </div>
+                            <div class="lib-card-actions">
                                 <a href="${vid.webViewLink}" target="_blank" class="btn btn-sm btn-outline">View in Drive ↗</a>
                             </div>
                         `;

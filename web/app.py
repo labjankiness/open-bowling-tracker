@@ -10,13 +10,14 @@ from fastapi import (
     FastAPI, Request, Response, Form, File, UploadFile,
     Depends, HTTPException, status, BackgroundTasks
 )
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 import config
 from core.tracker import BowlingTracker
 from core.game_tracker import GameTracker
+from core.media_meta import get_video_metadata, generate_video_thumbnail
 from web.auth import verify_passcode, create_session, revoke_session, is_authenticated, SESSION_COOKIE_NAME
 from web.gdrive import gdrive_manager
 
@@ -288,6 +289,7 @@ def run_video_job(
     mode: str,
     handedness: str = "left",
     style: str = "2-handed",
+    speed_factor: str = "auto",
     auto_drive_sync: bool = True
 ):
     job = JOBS.get(job_id)
@@ -335,11 +337,43 @@ def run_video_job(
                 for m in tracker.history
             ]
 
-            # Compute Advanced Metrics (Ball speed mph, Rotation RPM, Launch point, Breakpoint)
+            # 3. Resolve Slow-Motion Factor & Time Scaling
+            clip_dur = summary.duration_s if summary.duration_s > 0 else (tracker.frame_count / (tracker.fps or 30.0))
+            multiplier = 1.0
+            if speed_factor == "auto":
+                # Real bowling approaches take 4-6s. A clip > 13s is typical 4x slow-mo (240 FPS capture played at 60 FPS)
+                if clip_dur >= 13.0:
+                    multiplier = 4.0
+                elif clip_dur >= 8.0:
+                    multiplier = 2.0
+                else:
+                    multiplier = 1.0
+            else:
+                try:
+                    multiplier = float(speed_factor)
+                except ValueError:
+                    multiplier = 1.0
+
             peak_vel = getattr(summary, "peak_release_velocity_px_s", 0.0) or 0.0
-            # Standard video scaling: 1080p-4K back view speed conversion
-            est_speed_mph = round(min(22.0, max(11.0, peak_vel * 0.0055 if peak_vel > 500 else 16.2)), 1)
-            est_rpm = round(min(550, max(260, peak_vel * 0.14 if peak_vel > 500 else 390)))
+            is_two_handed = (tracker.resolved_style == "2-handed")
+            effective_vel = peak_vel * multiplier
+
+            # Real ball speed (mph) calibrated for slow-motion and resolution
+            if multiplier > 1.0:
+                est_speed_mph = round(min(22.0, max(13.5, effective_vel * 0.0038)), 1)
+            else:
+                est_speed_mph = round(min(22.0, max(11.0, peak_vel * 0.0055 if peak_vel > 500 else 16.2)), 1)
+
+            # Rev rate (RPM) calibrated for 2-handed delivery and slow-mo
+            if is_two_handed:
+                # 2-handed bowlers naturally rev higher (400-520 RPM)
+                base_rpm = effective_vel * 0.105 if multiplier > 1.0 else (peak_vel * 0.18)
+                est_rpm = round(min(580, max(380 if multiplier > 1.0 else 320, base_rpm)))
+            else:
+                # 1-handed bowlers (300-420 RPM)
+                base_rpm = effective_vel * 0.085 if multiplier > 1.0 else (peak_vel * 0.14)
+                est_rpm = round(min(480, max(280, base_rpm)))
+
             lateral_px = getattr(summary, "peak_lateral_ball_ankle_distance_px", 0.0) or 0.0
 
             is_lefty = (tracker.resolved_handedness == "left")
@@ -354,6 +388,7 @@ def run_video_job(
                 "peak_release_velocity_px_s": peak_vel,
                 "ball_speed_mph": est_speed_mph,
                 "ball_rotation_rpm": est_rpm,
+                "video_speed_factor": f"{multiplier:g}x ({'Auto-Detected Slo-Mo' if speed_factor == 'auto' and multiplier > 1.0 else 'Selected Speed'})",
                 "launch_point_board": f"Board {launch_board} ({'Lefty' if is_lefty else 'Righty'})",
                 "breakpoint": f"Board {breakpoint_board} (Apex)",
                 "handedness": tracker.resolved_handedness,
@@ -446,6 +481,7 @@ async def api_upload(
     mode: str = Form("both"),
     handedness: str = Form("left"),
     style: str = Form("2-handed"),
+    speed_factor: str = Form("auto"),
     auto_drive_sync: bool = Form(True),
 ):
     if not is_authenticated(request):
@@ -474,7 +510,7 @@ async def api_upload(
     }
 
     background_tasks.add_task(
-        run_video_job, job_id, str(saved_path), view, mode, handedness, style, auto_drive_sync
+        run_video_job, job_id, str(saved_path), view, mode, handedness, style, speed_factor, auto_drive_sync
     )
 
     return {"job_id": job_id, "status": "queued"}
@@ -556,6 +592,27 @@ async def save_gdrive_settings(
 TRAINING_VIDEOS_DIR = Path("/mnt/c/Users/Generate(_)/OneDrive/Videos/Bowling Videos for training")
 
 
+@app.get("/api/thumbnail/{filename}")
+async def get_thumbnail(filename: str, request: Request):
+    """Generates and serves a cached JPEG thumbnail for a video."""
+    if not is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    source_path = TRAINING_VIDEOS_DIR / filename
+    if not source_path.exists():
+        source_path = config.DATA_OUTPUT_DIR / filename
+    if not source_path.exists():
+        source_path = config.DATA_INPUT_DIR / filename
+    if not source_path.exists():
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    thumb_path = generate_video_thumbnail(source_path)
+    if thumb_path and thumb_path.exists():
+        return FileResponse(thumb_path, media_type="image/jpeg")
+
+    raise HTTPException(status_code=404, detail="Thumbnail not available")
+
+
 @app.get("/api/library")
 async def get_library(request: Request):
     if not is_authenticated(request):
@@ -564,10 +621,13 @@ async def get_library(request: Request):
     local_videos = []
     if config.DATA_OUTPUT_DIR.exists():
         for p in sorted(config.DATA_OUTPUT_DIR.glob("*.mp4"), key=lambda f: f.stat().st_mtime, reverse=True):
+            meta = get_video_metadata(p)
             local_videos.append({
                 "name": p.name,
                 "url": f"/api/video/{p.name}",
-                "size_mb": round(p.stat().st_size / (1024 * 1024), 1)
+                "thumbnail_url": f"/api/thumbnail/{p.name}",
+                "size_mb": round(p.stat().st_size / (1024 * 1024), 1),
+                "metadata": meta
             })
 
     # Permanent Training Videos Folder
@@ -575,10 +635,13 @@ async def get_library(request: Request):
     if TRAINING_VIDEOS_DIR.exists():
         for p in sorted(TRAINING_VIDEOS_DIR.glob("*.*"), key=lambda f: f.stat().st_mtime, reverse=True):
             if p.suffix.lower() in (".mp4", ".mov", ".m4v"):
+                meta = get_video_metadata(p)
                 training_videos.append({
                     "name": p.name,
                     "url": f"/api/training-video/{p.name}",
-                    "size_mb": round(p.stat().st_size / (1024 * 1024), 1)
+                    "thumbnail_url": f"/api/thumbnail/{p.name}",
+                    "size_mb": round(p.stat().st_size / (1024 * 1024), 1),
+                    "metadata": meta
                 })
 
     gdrive_videos = gdrive_manager.list_videos() if gdrive_manager.is_configured() else []
@@ -644,6 +707,7 @@ async def analyze_training_video(
     mode: str = Form("both"),
     handedness: str = Form("left"),
     style: str = Form("2-handed"),
+    speed_factor: str = Form("auto"),
     auto_drive_sync: bool = Form(True)
 ):
     """Starts analysis on an existing clip from the connected training folder."""
@@ -669,7 +733,7 @@ async def analyze_training_video(
     }
 
     background_tasks.add_task(
-        run_video_job, job_id, str(source_path), view, mode, handedness, style, auto_drive_sync
+        run_video_job, job_id, str(source_path), view, mode, handedness, style, speed_factor, auto_drive_sync
     )
 
     return {"job_id": job_id, "status": "queued"}

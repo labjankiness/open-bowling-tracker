@@ -5,6 +5,8 @@ data/input/*
 !data/input/.gitkeep
 data/output/*
 !data/output/.gitkeep
+data/thumbnails/*
+!data/thumbnails/.gitkeep
 logs/metrics_log.csv
 logs/game_log.csv
 models/*.task
