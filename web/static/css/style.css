@@ -195,9 +195,21 @@ body {
 .batch-progress-stats {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     margin-top: 6px;
     font-size: 0.85rem;
     color: #94a3b8;
+}
+
+.batch-eta {
+    color: #38bdf8;
+    font-size: 0.82rem;
+    font-weight: 500;
+    font-family: var(--font-mono);
+    background: rgba(56, 189, 248, 0.1);
+    padding: 2px 8px;
+    border-radius: 10px;
+    border: 1px solid rgba(56, 189, 248, 0.2);
 }
 
 .batch-progress-stats strong {

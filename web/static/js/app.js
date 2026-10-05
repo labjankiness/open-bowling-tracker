@@ -634,6 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const batchProgressBarFill = document.getElementById('batchProgressBarFill');
     const batchCountText = document.getElementById('batchCountText');
     const batchPercentText = document.getElementById('batchPercentText');
+    const batchEtaText = document.getElementById('batchEtaText');
     const batchPulseDot = document.getElementById('batchPulseDot');
     const batchStatusBadge = document.getElementById('batchStatusBadge');
     const batchCurrentVideo = document.getElementById('batchCurrentVideo');
@@ -661,6 +662,24 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (batchCountText) {
                 batchCountText.textContent = `${data.annotated_count || 0} / ${data.total_training || 0} Videos Annotated`;
+            }
+
+            // Update ETA
+            if (batchEtaText) {
+                const remaining = Math.max(0, (data.total_training || 0) - (data.annotated_count || 0));
+                if (!data.is_running && pct < 100) {
+                    batchEtaText.textContent = `⏱ Paused (${remaining} left)`;
+                } else if (remaining === 0 || pct >= 100) {
+                    batchEtaText.textContent = `⏱ Complete!`;
+                } else {
+                    const estMinutes = Math.ceil((remaining * 35) / 60);
+                    if (estMinutes > 60) {
+                        const hrs = (estMinutes / 60).toFixed(1);
+                        batchEtaText.textContent = `⏱ Est. Remaining: ~${hrs} hrs`;
+                    } else {
+                        batchEtaText.textContent = `⏱ Est. Remaining: ~${estMinutes} mins`;
+                    }
+                }
             }
 
             // Update Badge & Pulse Dot
