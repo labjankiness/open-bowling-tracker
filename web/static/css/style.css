@@ -516,8 +516,85 @@ select:focus, input:focus {
     display: none !important;
 }
 
-.text-success {
-    color: var(--success);
+/* Bowling Scorecard */
+.scorecard-card {
+    background: #141b24;
+    border: 1px solid #2a374a;
+}
+
+.score-badge {
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    padding: 6px 14px;
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    color: #93c5fd;
+}
+
+.score-badge strong {
+    color: #fff;
+    font-size: 1.15rem;
+    font-family: var(--font-mono);
+    margin-left: 4px;
+}
+
+.scorecard-table-wrapper {
+    overflow-x: auto;
+    margin-top: 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--card-border);
+}
+
+.scorecard-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: center;
+    font-family: var(--font-mono);
+}
+
+.scorecard-table th {
+    background: #1e293b;
+    color: var(--text-muted);
+    padding: 8px;
+    font-size: 0.8rem;
+    border: 1px solid var(--card-border);
+}
+
+.scorecard-table td {
+    border: 1px solid var(--card-border);
+    padding: 0;
+    min-width: 50px;
+}
+
+.roll-box {
+    padding: 10px 4px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #f8fafc;
+    background: #0f172a;
+}
+
+.roll-box .strike {
+    color: #ef4444;
+}
+
+.roll-box .spare {
+    color: #3b82f6;
+}
+
+.cum-box {
+    padding: 10px 4px;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #60a5fa;
+    background: #182232;
+}
+
+.scorecard-note {
+    margin-top: 12px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-style: italic;
 }
 
 @media (max-width: 768px) {

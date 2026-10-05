@@ -87,6 +87,37 @@ async def dashboard_page(request: Request):
     )
 
 
+def detect_camera_view(video_path: str) -> str:
+    """Auto-detect whether camera is 'back' or 'side' view from initial bowler pose. Defaults to 'back'."""
+    try:
+        import cv2
+        from core.pose_estimator import PoseEstimator
+        capture = cv2.VideoCapture(video_path)
+        fps = capture.get(cv2.CAP_PROP_FPS) or 30.0
+        with PoseEstimator(fps=fps) as estimator:
+            checked = 0
+            shoulder_widths = []
+            while checked < 45:
+                ok, frame = capture.read()
+                if not ok:
+                    break
+                landmarks = estimator.process(frame)
+                if landmarks is not None:
+                    ls = landmarks.left_shoulder
+                    rs = landmarks.right_shoulder
+                    if ls is not None and rs is not None:
+                        shoulder_widths.append(abs(ls[0] - rs[0]))
+                checked += 1
+            capture.release()
+            if shoulder_widths:
+                avg_width = sum(shoulder_widths) / len(shoulder_widths)
+                if avg_width < 0.07:
+                    return "side"
+    except Exception as e:
+        print(f"[AutoDetect] Camera view fallback to 'back': {e}")
+    return "back"
+
+
 # --- Background Worker ---
 
 def run_video_job(job_id: str, input_path: str, view: str, mode: str, auto_drive_sync: bool):
@@ -95,8 +126,8 @@ def run_video_job(job_id: str, input_path: str, view: str, mode: str, auto_drive
         return
 
     job["status"] = "processing"
-    job["progress"] = 25
-    job["message"] = "Initializing computer vision models..."
+    job["progress"] = 15
+    job["message"] = "Initializing analysis..."
 
     try:
         input_file = Path(input_path)
@@ -104,18 +135,25 @@ def run_video_job(job_id: str, input_path: str, view: str, mode: str, auto_drive
         annotated_path = config.DATA_OUTPUT_DIR / output_filename
         config.DATA_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+        # 1. Camera View Auto-Detection
+        resolved_view = view
+        if view == "auto":
+            job["message"] = "Auto-detecting camera angle (Default: Back)..."
+            resolved_view = detect_camera_view(str(input_path))
+        job["detected_view"] = resolved_view
+
+        # 2. Biomechanics & Pose Tracking
         if mode in ("track", "both"):
-            job["message"] = "Running pose estimation & biomechanics..."
-            job["progress"] = 45
+            job["message"] = f"Tracking bowler biomechanics ({resolved_view} view)..."
+            job["progress"] = 35
 
             tracker = BowlingTracker(
                 video_path=str(input_path),
-                view=view,
+                view=resolved_view,
                 annotate_output_path=str(annotated_path)
             )
             summary = tracker.run()
 
-            # Format history for charting
             history_data = [
                 {
                     "frame_index": m.frame_index,
@@ -135,16 +173,39 @@ def run_video_job(job_id: str, input_path: str, view: str, mode: str, auto_drive
             job["history"] = history_data
             job["frame_count"] = tracker.frame_count
 
-        elif mode == "score":
-            job["message"] = "Analyzing pin deck..."
-            job["progress"] = 50
-            game_tracker = GameTracker(pin_video_path=str(input_path))
-            game_summary = game_tracker.run()
-            job["game_summary"] = {
-                "rolls": game_summary.rolls,
-                "total_score": game_summary.total_score,
-                "is_complete": game_summary.is_complete
-            }
+        # 3. Pin Deck Scoring
+        if mode in ("score", "both"):
+            job["message"] = "Analyzing pin deck & scoring rolls..."
+            job["progress"] = 70
+            try:
+                game_tracker = GameTracker(pin_video_path=str(input_path))
+                game_summary = game_tracker.run()
+                serialized_frames = [
+                    {
+                        "frame_number": f.frame_number,
+                        "rolls": f.rolls,
+                        "is_strike": f.is_strike,
+                        "is_spare": f.is_spare,
+                        "frame_score": f.frame_score,
+                        "cumulative_score": f.cumulative_score,
+                    }
+                    for f in game_summary.frames
+                ]
+                job["game_summary"] = {
+                    "rolls": game_summary.rolls,
+                    "total_score": game_summary.total_score,
+                    "is_complete": game_summary.is_complete,
+                    "frames": serialized_frames
+                }
+            except Exception as pe:
+                print(f"[PinDeck] Note on pin detection: {pe}")
+                job["game_summary"] = {
+                    "rolls": [],
+                    "total_score": None,
+                    "is_complete": False,
+                    "frames": [],
+                    "note": "Pin deck not clearly resolved in this clip"
+                }
 
         job["annotated_video_url"] = f"/api/video/{output_filename}" if annotated_path.exists() else None
         job["progress"] = 85

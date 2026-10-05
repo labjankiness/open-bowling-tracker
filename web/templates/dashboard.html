@@ -51,6 +51,7 @@
                     <div class="control-group">
                         <label for="cameraView">Camera View</label>
                         <select id="cameraView" name="view">
+                            <option value="auto" selected>✨ Auto-Detect (Default: Back View)</option>
                             <option value="back">Back View (Down the lane)</option>
                             <option value="side">Side View (Approach & Release)</option>
                         </select>
@@ -59,8 +60,9 @@
                     <div class="control-group">
                         <label for="analysisMode">Analysis Mode</label>
                         <select id="analysisMode" name="mode">
-                            <option value="track">Biomechanics & Pose (Release speed, Spine tilt)</option>
-                            <option value="score">Pin Deck Scoring (Classical CV)</option>
+                            <option value="both" selected>⚡ Full Analysis (Biomechanics + Pin Scoring)</option>
+                            <option value="track">Biomechanics & Pose Only</option>
+                            <option value="score">Pin Deck Scoring Only</option>
                         </select>
                     </div>
 
@@ -127,6 +129,36 @@
                     </div>
                     <a id="driveResultLink" href="#" target="_blank" class="btn btn-sm btn-outline">Open in Google Drive ↗</a>
                 </div>
+            </div>
+
+            <!-- Scorecard Card (Visible when pin scoring is run) -->
+            <div id="scorecardCard" class="card scorecard-card full-width hidden">
+                <div class="card-header-inline">
+                    <h3>🎳 Game Scorecard</h3>
+                    <div class="score-badge">
+                        <span>Total Score: </span>
+                        <strong id="scorecardTotal">--</strong>
+                    </div>
+                </div>
+                <div class="scorecard-table-wrapper">
+                    <table class="scorecard-table" id="scorecardTable">
+                        <thead>
+                            <tr>
+                                <th>F1</th><th>F2</th><th>F3</th><th>F4</th><th>F5</th>
+                                <th>F6</th><th>F7</th><th>F8</th><th>F9</th><th>F10</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="rolls-row" id="scorecardRollsRow">
+                                <!-- Rolls dynamically injected here -->
+                            </tr>
+                            <tr class="cumulative-row" id="scorecardCumRow">
+                                <!-- Cumulative scores dynamically injected here -->
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="scorecardNote" class="scorecard-note hidden"></div>
             </div>
 
             <!-- Video Player -->

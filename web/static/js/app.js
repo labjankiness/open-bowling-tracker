@@ -179,6 +179,66 @@ document.addEventListener('DOMContentLoaded', () => {
         if (job.history && job.history.length > 0) {
             renderChart(job.history);
         }
+
+        // Bowling Scorecard
+        const scorecardCard = document.getElementById('scorecardCard');
+        if (job.game_summary) {
+            scorecardCard.classList.remove('hidden');
+            renderScorecard(job.game_summary);
+        } else {
+            scorecardCard.classList.add('hidden');
+        }
+    }
+
+    function renderScorecard(game) {
+        const totalElem = document.getElementById('scorecardTotal');
+        const rollsRow = document.getElementById('scorecardRollsRow');
+        const cumRow = document.getElementById('scorecardCumRow');
+        const noteElem = document.getElementById('scorecardNote');
+
+        if (game.total_score != null) {
+            totalElem.textContent = game.total_score;
+        } else if (game.rolls && game.rolls.length > 0) {
+            totalElem.textContent = game.rolls.reduce((a, b) => a + b, 0) + ' (partial)';
+        } else {
+            totalElem.textContent = '--';
+        }
+
+        if (game.note) {
+            noteElem.textContent = 'ℹ️ ' + game.note;
+            noteElem.classList.remove('hidden');
+        } else {
+            noteElem.classList.add('hidden');
+        }
+
+        rollsRow.innerHTML = '';
+        cumRow.innerHTML = '';
+
+        const frames = game.frames || [];
+        for (let i = 1; i <= 10; i++) {
+            const frame = frames.find(f => f.frame_number === i);
+            const rollCell = document.createElement('td');
+            const cumCell = document.createElement('td');
+
+            if (frame) {
+                let rollsText = '';
+                if (frame.is_strike) {
+                    rollsText = '<span class="strike">X</span>';
+                } else if (frame.is_spare) {
+                    rollsText = `${frame.rolls[0]} <span class="spare">/</span>`;
+                } else {
+                    rollsText = frame.rolls.join(' ');
+                }
+                rollCell.innerHTML = `<div class="roll-box">${rollsText}</div>`;
+                cumCell.innerHTML = `<div class="cum-box">${frame.cumulative_score}</div>`;
+            } else {
+                rollCell.innerHTML = '<div class="roll-box empty">-</div>';
+                cumCell.innerHTML = '<div class="cum-box empty">-</div>';
+            }
+
+            rollsRow.appendChild(rollCell);
+            cumRow.appendChild(cumCell);
+        }
     }
 
     function renderChart(history) {
