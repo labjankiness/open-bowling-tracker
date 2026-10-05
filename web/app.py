@@ -1,5 +1,6 @@
 import os
 import uuid
+import json
 import shutil
 import asyncio
 from pathlib import Path
@@ -144,7 +145,7 @@ def transcode_to_h264(video_path: Path) -> bool:
 
 
 def load_bowler_baseline_profile() -> Optional[dict]:
-    profile_path = PROJECT_ROOT / "data" / "bowler_profile.json"
+    profile_path = config.PROJECT_ROOT / "data" / "bowler_profile.json"
     if profile_path.exists():
         try:
             with open(profile_path, "r") as f:
