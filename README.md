@@ -1,145 +1,184 @@
-# Live Bowling Tracker
+# Live Bowling Tracker & 24/7 AI Coach 🎳
 
-Computer-vision toolkit for two-handed bowling: a MediaPipe-Pose biomechanics
-tracker for the approach/release, and a classical-CV pin-deck analyzer that
-auto-scores a full recorded game.
+An AI-powered computer-vision bowling coach that tracks biomechanics, trajectory, ball speed, rev rate (RPM), breakpoint, and scoring from standard phone video recordings (including 240 FPS slow-motion clips).
 
-## 1. Biomechanics tracking (`track`)
+---
 
-Processes a back-view or side-view approach video and computes, per frame:
+## 🎯 Project Vision & Mission
 
-- **Spine tilt** — trunk-line angle from vertical
-- **Knee flexion** — bend of the sliding-leg knee
-- **Hip-to-shoulder separation** — torso coil ("X-factor") between hip and shoulder lines
-- **Lateral ball-to-ankle distance** — horizontal ball drift relative to the sliding foot
-- **Release velocity** — frame-to-frame speed of the ball (wrist-midpoint proxy)
+The goal of this project is to develop a **24/7 AI Personal Bowling Coach in your pocket**. 
+- **Current Stage**: Modern responsive web application for rapid validation, video library browsing, continuous shot processing, and personal bowler fingerprint training.
+- **Next Stage**: Android mobile application released to the **Google Play Store**, followed by the **Apple App Store**.
+
+---
+
+## 👤 Primary Bowler Profile (2-Handed Lefty)
+
+The system is configured with dedicated physics and biomechanics calibration for a **2-Handed Left-Handed** delivery:
+- **Slide Leg**: **Right Leg** (slide knee flexion measures the right knee driving into the foul line, while the left trailing leg stays unweighted).
+- **USBC Lefty Board Indexing**:
+  - **Board 1**: Far Left Gutter (outside left rail)
+  - **Board 20**: Center Dot / Center Arrow
+  - **Board 39**: Far Right Gutter
+- **Pocket Target**: **1-2 Pocket** (Pins 1 and 2).
+- **Dual-Hand Wrist Midpoint**: Ball tracking proxy accounts for both hands cradling the ball through backswing until uncoupling at release.
+
+*(Note: Right-handed and 1-handed deliveries are fully supported via the UI dropdowns or auto-detection).*
+
+---
+
+## 🚀 Key Features
+
+### 1. High-Precision Biomechanics Tracking
+- Powered by Google **MediaPipe Pose Heavy** (`models/pose_landmarker_heavy.task`) with rolling-window outlier rejection.
+- Computes per-frame:
+  - **Spine Tilt Angle**: Trunk inclination relative to vertical.
+  - **Slide Knee Flexion**: Degree of knee compression at foul line plant/slide.
+  - **Hip-to-Shoulder Separation**: Torso coil / "X-Factor" during backswing.
+  - **Lateral Ball-to-Ankle Clearance**: Distance of ball release relative to slide ankle.
+
+### 2. Slow-Motion & High-Frame-Rate Calibration
+- Phones recording high-speed slow-mo (e.g. 240 FPS stored at 60 FPS) previously caused rev rates and ball velocities to read artificially low ($1/4\text{th}$ real speed).
+- Built-in **Auto-SloMo Detection**:
+  - Clips $\ge 13\text{s}$ are automatically scaled with a **4.0× multiplier** (calibrating release velocity to real-world 15–18 mph and rev rate to 400–520 RPM for 2-handed bowlers).
+  - Clips between 8s and 13s apply a **2.0× multiplier**.
+  - Manual overrides (1×, 2×, 4×, 8×) are selectable in the UI.
+
+### 3. Video Library with Picture Previews & GPS Geolocation
+- **Thumbnail Previews**: Automated JPEG extraction around bowler setup/approach, cached locally in `data/thumbnails/` with lazy loading.
+- **Metadata Extraction**: Date, time, file size, duration, and resolution (HD to 4K).
+- **ISO-6709 Geolocation**: Extracts GPS coordinates embedded in phone MP4 containers (e.g. Singapore bowling alleys) with direct links to Google Maps.
+
+### 4. Background Batch Annotation Pipeline
+- Batch runner (`scripts/batch_annotate.py`) processes entire video libraries in the background.
+- **Deduplication**: Automatically removes redundant uploads.
+- **Skip Logic**: Checks `data/output/` and skips previously processed videos so no compute is wasted.
+- **Native Browser Playback**: Transcodes annotated clips to standard H.264 MP4 (`yuv420p` + `faststart`) for instant in-browser Chrome/Safari video playback without buffering.
+
+### 5. Live Dashboard Progress Bar & Real-Time Controls
+- Displays real-time progress across training clips (e.g., `32 / 77 Videos Annotated (41.6%)`).
+- Real-time animated progress bar with **Live ETA Countdown**.
+- Live controls to **Pause**, **Resume**, and jump directly to **"📂 View Processed Shots"**.
+
+---
+
+## 🗺️ Product & App Roadmap
+
+```mermaid
+flowchart LR
+    P1["Phase 1: Web Platform\n(Active: Live CV, Library, Batch Processing)"]
+    P2["Phase 2: Coach Intelligence\n(Ball Arsenal, Oil Patterns & Transitions)"]
+    P3["Phase 3: Google Play Store\n(Android Mobile Packaging)"]
+    P4["Phase 4: Apple App Store\n(iOS Mobile App)"]
+
+    P1 --> P2 --> P3 --> P4
+```
+
+- [x] **Phase 1: Web Platform & Vision Pipeline** (Current)
+  - Responsive web dashboard (FastAPI + Jinja2 + Vanilla JS).
+  - MediaPipe Heavy Pose Landmarker integration.
+  - 2-Handed Lefty biomechanics & board numbering.
+  - Slow-motion multiplier calibration.
+  - Video library with thumbnails and ISO-6709 GPS geolocation.
+  - Batch annotation runner with live dashboard progress bar.
+- [ ] **Phase 2: Bowling Coach Intelligence**
+  - **Ball Arsenal Tracker**: Catalog balls by coverstock (Solid, Pearl, Hybrid, Urethane) and core specs (Symmetrical vs Asymmetrical).
+  - **Oil Pattern & Transition Advisor**: Detect lane breakdown and recommend moves inside or ball changes.
+  - **Center & Lane Memory**: Save performance profiles by bowling center and lane numbers.
+- [ ] **Phase 3: Google Play Store Release (Android)**
+  - Wrap frontend with Capacitor / Trusted Web Activity (TWA) or React Native.
+  - Direct camera capture with auto-crop for bowling approaches.
+- [ ] **Phase 4: Apple App Store Release (iOS)**
+  - Native iOS build with offline storage sync.
+
+---
+
+## 💻 Multi-Machine Setup Guide
+
+To pull this repository and continue development or run on another machine:
+
+### 1. Clone & Set Up Python Environment
 
 ```bash
-python main.py track --video data/input/back_view.mp4 --view back
-python main.py track --video data/input/side_view.mp4 --view side --save-video
-```
+git clone https://github.com/labjankiness/live-bowling-tracker.git
+cd live-bowling-tracker
 
-- `--view {back,side}` (required) — tells the tracker which leg/side to read for
-  knee flexion and lateral drift.
-- `--save-video` — writes a pose-overlay annotated copy to `data/output/`.
-- `--pixels-per-meter <float>` — optional calibration factor to report distance
-  and velocity metrics in meters/meters-per-second instead of pixels.
-
-Each run appends one row of peak metrics to `logs/metrics_log.csv`.
-
-## 2. Automatic game scoring (`score`)
-
-Record a full game with a **fixed camera pointed at the pin deck** (separate
-from the bowler-approach camera used for `track`). The analyzer watches for
-motion (a ball rolling through / pins falling) followed by stillness, counts
-standing pins at each rest point, and converts the sequence into a roll-by-roll
-score using standard 10-pin rules (strikes, spares, 10th-frame bonus rolls).
-
-```bash
-python main.py score --pin-video data/input/pin_deck_game1.mp4
-```
-
-Output includes the full frame-by-frame scorecard and final score, and appends
-one row (roll sequence, frame scores, total) to `logs/game_log.csv`.
-
-**Camera setup matters.** This is a classical-CV pipeline (thresholding +
-contour counting + frame differencing), not a trained model, so accuracy
-depends on your setup:
-- Mount the camera so it has a steady, unobstructed view of the full pin deck.
-- Good, even lighting with pins visibly brighter than the lane/background helps
-  contour-based counting a lot.
-- If detection misses throws or double-counts them, tune the constructor
-  arguments on `PinDeckAnalyzer` (`core/pin_detector.py`): `roi` to crop out
-  distracting background, `motion_threshold`/`rest_frames_required` to match
-  your frame rate, and `min_pin_area`/`max_pin_area` to match pin size at your
-  camera's resolution and distance.
-- If a game ends up "incomplete," the CLI tells you how many frames it
-  resolved — that's usually a sign the thresholds need adjusting for your feed.
-
-## Project layout
-
-```
-LiveBowlingTracker/
-├── main.py                  # CLI entry point (track / score subcommands)
-├── config.py                # Paths, landmark indices, pin-detector defaults
-├── core/
-│   ├── pose_estimator.py    # MediaPipe Pose wrapper (perception only)
-│   ├── analytics.py         # Pure NumPy biomechanics math
-│   ├── tracker.py           # Orchestrates video -> pose -> metrics -> summary
-│   ├── pin_detector.py      # Pin-deck CV: standing-pin count + motion segmentation
-│   ├── scoring.py           # Pure 10-pin scoring engine (rolls -> scorecard)
-│   ├── game_tracker.py      # Orchestrates pin video -> rolls -> scorecard
-│   └── metrics_logger.py    # Appends to logs/metrics_log.csv and logs/game_log.csv
-├── data/
-│   ├── input/                # Put source videos here (approach + pin-deck)
-│   └── output/                # Annotated (pose-overlay) videos land here
-├── logs/
-│   ├── metrics_log.csv       # One row per `track` run (created automatically)
-│   └── game_log.csv          # One row per `score` run (created automatically)
-├── tests/
-│   ├── test_analytics.py     # Unit tests for the biomechanics math core
-│   ├── test_scoring.py       # Unit tests for the 10-pin scoring engine
-│   └── test_pin_detector.py  # Unit tests for observation -> roll conversion
-└── requirements.txt
-```
-
-## Setup
-
-```bash
+# Create virtual environment
 python3 -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
+source venv/bin/activate    # On Windows: venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-`track` needs a MediaPipe Pose Landmarker model bundle (not bundled with the
-`mediapipe` package -- current MediaPipe releases dropped the old
-`mp.solutions` API in favor of the Tasks API, which loads an explicit model
-file). Download it once:
+### 2. Download MediaPipe Pose Heavy Model
 
 ```bash
 mkdir -p models
-curl -sSL -o models/pose_landmarker_lite.task \
-  https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task
+curl -sSL -o models/pose_landmarker_heavy.task \
+  https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/latest/pose_landmarker_heavy.task
 ```
 
-## Tests
+### 3. Launch Web Dashboard
 
 ```bash
-pip install pytest
-pytest tests/
+# Optional: Set session passcode (default: bowling2026)
+export BOWLING_SECRET_KEY="bowling2026"
+
+# Run Uvicorn server
+uvicorn web.app:app --host 0.0.0.0 --port 8000 --reload
+```
+Open **`http://localhost:8000/`** in your browser and enter passcode `bowling2026`.
+
+### 4. Run Batch Video Annotation (CLI)
+
+To process or resume batch annotation across your training folder:
+
+```bash
+# Full background run (auto-skips existing videos, 2-handed lefty profile)
+python scripts/batch_annotate.py --handedness left --style 2-handed --speed-factor auto
+
+# Test run on next 1 video only
+python scripts/batch_annotate.py --max 1
 ```
 
-## Findings from real footage (first real-world test pass)
+---
 
-Tested against real phone-recorded footage (4K portrait, 60fps, camera
-mounted on the ball-return rack pointing down the lane -- captures both the
-bowler's back and the full pin deck in one shot):
+## 📂 Project Structure
 
-- **`track` works.** MediaPipe pose detection reliably picks up the bowler
-  even at this distance (~99.9% landmark confidence in testing) and the
-  pipeline runs end-to-end on a real clip. One issue found: peak release
-  velocity came back at an implausible ~16,700 px/s on a 28s clip -- almost
-  certainly a single-frame landmark jitter spike (e.g. a wrist landmark
-  briefly misplaced for one frame), not real motion. There's currently no
-  outlier rejection or smoothing on the frame-to-frame metrics; a median
-  filter or a sanity-check bound on frame-to-frame displacement would fix
-  this and is the next real improvement to make here.
-- **`score`'s classical-CV pin detector does not work at this camera
-  distance.** At the resolution/distance in this footage, individual pins
-  are only ~20-30px tall in the analysis frame -- too small and low-contrast
-  for Otsu thresholding + contour counting, even with a tight per-lane crop.
-  Global thresholding on the full frame instead picks up the ceiling, ad
-  screens, and ball-return machinery as the "brightest" regions. This isn't
-  a tuning problem; it confirms the pin-detection approach needs either a
-  closer/more-zoomed camera setup, or (more realistically for a fixed
-  camera) a trained small object-detection model per the Phase 4 mobile
-  roadmap, rather than more classical-CV tuning.
+```
+live-bowling-tracker/
+├── main.py                     # CLI entry point (track / score)
+├── config.py                   # Central configuration & landmark definitions
+├── core/
+│   ├── tracker.py              # Biomechanics tracker orchestrator
+│   ├── analytics.py            # Vector math for angles, speeds & rev rate
+│   ├── pose_estimator.py       # MediaPipe Pose Tasks API wrapper
+│   ├── media_meta.py           # Thumbnail generator & ISO-6709 GPS extractor
+│   ├── pin_detector.py         # Pin deck CV analyzer
+│   ├── game_tracker.py         # 10-pin game scoring tracker
+│   └── scoring.py              # Scorecard rules engine
+├── scripts/
+│   ├── batch_annotate.py       # Batch annotation runner with skip & deduplication logic
+│   └── train_baseline.py       # Personal bowler baseline profiling script
+├── web/
+│   ├── app.py                  # FastAPI server & REST API
+│   ├── auth.py                 # Passcode authentication & session management
+│   ├── gdrive.py               # Google Drive sync manager
+│   ├── templates/              # Jinja2 HTML templates (dashboard, login)
+│   └── static/                 # CSS stylesheets, JS frontend scripts, icons
+├── data/
+│   ├── input/                  # Uploaded raw videos
+│   ├── output/                 # H.264 annotated browser-ready MP4s
+│   ├── thumbnails/             # Cached JPEG video previews
+│   └── bowler_profile.json     # Trained personal baseline profile
+├── models/
+│   └── pose_landmarker_heavy.task # Heavy MediaPipe model bundle
+└── logs/
+    └── metrics_log.csv         # Shot-by-shot biomechanics log
+```
 
-## Notes on the ball position
+---
 
-MediaPipe Pose has no ball landmark. Since a two-handed delivery keeps the ball
-cradled in both hands through most of the approach, `analytics.estimate_ball_position`
-uses the midpoint of the left/right wrist landmarks as a proxy. This is isolated
-in its own function so a dedicated ball detector (e.g. a Hough-circle color
-tracker, or a small object-detection model) can be substituted later without
-touching any of the downstream metric calculations.
+## 📄 License & Notes
+Private repository developed for personal bowling training and product development.
