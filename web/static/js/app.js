@@ -66,16 +66,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedBall = localStorage.getItem('bowlingBall');
     const handednessSelect = document.getElementById('bowlerHandedness');
     const styleSelect = document.getElementById('deliveryStyle');
-    const ballSelect = document.getElementById('bowlingBall');
 
     if (savedHandedness && handednessSelect) {
         handednessSelect.value = savedHandedness;
     }
     if (savedStyle && styleSelect) {
         styleSelect.value = savedStyle;
-    }
-    if (savedBall && ballSelect) {
-        ballSelect.value = savedBall;
     }
 
     if (handednessSelect) {
@@ -88,11 +84,88 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('deliveryStyle', e.target.value);
         });
     }
-    if (ballSelect) {
-        ballSelect.addEventListener('change', (e) => {
-            localStorage.setItem('bowlingBall', e.target.value);
+
+    // Searchable Bowling Ball Combobox Controller
+    const ballPickerTrigger = document.getElementById('ballPickerTrigger');
+    const ballDropdownMenu = document.getElementById('ballDropdownMenu');
+    const ballSearchFilter = document.getElementById('ballSearchFilter');
+    const ballOptionsList = document.getElementById('ballOptionsList');
+    const ballTriggerText = document.getElementById('ballTriggerText');
+    const ballHiddenInput = document.getElementById('bowlingBall');
+
+    function selectBallOption(val, text) {
+        if (ballHiddenInput) ballHiddenInput.value = val;
+        if (ballTriggerText) ballTriggerText.textContent = text;
+        localStorage.setItem('bowlingBall', val);
+        localStorage.setItem('bowlingBallText', text);
+
+        if (ballOptionsList) {
+            ballOptionsList.querySelectorAll('.ball-option-item').forEach(item => {
+                if (item.getAttribute('data-value') === val) {
+                    item.classList.add('selected');
+                } else {
+                    item.classList.remove('selected');
+                }
+            });
+        }
+        if (ballDropdownMenu) ballDropdownMenu.classList.add('hidden');
+    }
+
+    if (savedBall && ballHiddenInput) {
+        const savedText = localStorage.getItem('bowlingBallText') || '✨ Auto-Detect (Ball Color & Core)';
+        selectBallOption(savedBall, savedText);
+    }
+
+    if (ballPickerTrigger && ballDropdownMenu) {
+        ballPickerTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            ballDropdownMenu.classList.toggle('hidden');
+            if (!ballDropdownMenu.classList.contains('hidden') && ballSearchFilter) {
+                ballSearchFilter.value = '';
+                filterBallOptions('');
+                ballSearchFilter.focus();
+            }
         });
     }
+
+    function filterBallOptions(query) {
+        if (!ballOptionsList) return;
+        const q = query.toLowerCase().trim();
+        const items = ballOptionsList.querySelectorAll('.ball-option-item');
+        items.forEach(item => {
+            const text = item.textContent.toLowerCase();
+            if (!q || text.includes(q)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    if (ballSearchFilter) {
+        ballSearchFilter.addEventListener('input', (e) => {
+            filterBallOptions(e.target.value);
+        });
+        ballSearchFilter.addEventListener('click', (e) => e.stopPropagation());
+    }
+
+    if (ballOptionsList) {
+        ballOptionsList.addEventListener('click', (e) => {
+            const item = e.target.closest('.ball-option-item');
+            if (item) {
+                const val = item.getAttribute('data-value');
+                const title = item.querySelector('.ball-opt-main') ? item.querySelector('.ball-opt-main').textContent : item.textContent;
+                selectBallOption(val, title);
+            }
+        });
+    }
+
+    // Dismiss dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (ballDropdownMenu && !ballDropdownMenu.contains(e.target) && e.target !== ballPickerTrigger) {
+            ballDropdownMenu.classList.add('hidden');
+        }
+    });
 
     // Submit / Upload Form
     uploadForm.addEventListener('submit', async (e) => {

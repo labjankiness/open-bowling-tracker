@@ -145,18 +145,77 @@
                     </div>
 
                     <div class="control-group">
-                        <label for="bowlingBall">Bowling Ball</label>
-                        <select id="bowlingBall" name="bowling_ball">
-                            <option value="auto" selected>✨ Auto-Detect (Ball Color & Core)</option>
-                            <option value="storm_phaze_2">Storm Phaze II (Solid Reactive)</option>
-                            <option value="storm_hy_road">Storm Hy-Road (Hybrid Reactive)</option>
-                            <option value="hammer_black_widow_2_0_hybrid">Hammer Black Widow 2.0 (Asym Hybrid)</option>
-                            <option value="hammer_purple_pearl_urethane">Hammer Purple Pearl Urethane (Control)</option>
-                            <option value="roto_grip_gem">Roto Grip GEM (Heavy Oil Asym)</option>
-                            <option value="motiv_venom_shock">Motiv Venom Shock (Benchmark Solid)</option>
-                            <option value="brunswick_tzone_spare">Brunswick TZone / Plastic Spare (Straight)</option>
-                            <option value="custom_generic_reactive">Generic Reactive Resin</option>
-                        </select>
+                        <label for="bowlingBallSearchInput">Bowling Ball</label>
+                        <div class="searchable-ball-wrapper" id="ballPickerWrapper">
+                            <input type="hidden" id="bowlingBall" name="bowling_ball" value="auto">
+                            <div class="ball-search-trigger" id="ballPickerTrigger">
+                                <span class="ball-trigger-text" id="ballTriggerText">✨ Auto-Detect (Ball Color & Core)</span>
+                                <span class="ball-trigger-arrow">▾</span>
+                            </div>
+                            <div class="ball-dropdown-menu hidden" id="ballDropdownMenu">
+                                <div class="ball-search-box">
+                                    <input type="text" id="ballSearchFilter" placeholder="🔍 Search ball name, brand, or core..." autocomplete="off">
+                                </div>
+                                <div class="ball-options-list" id="ballOptionsList">
+                                    <div class="ball-option-item selected" data-value="auto">
+                                        <div class="ball-opt-main">✨ Auto-Detect (Ball Color & Core)</div>
+                                        <div class="ball-opt-sub">Computer Vision HSV Color & Core Shape Detection</div>
+                                    </div>
+                                    <div class="ball-option-item" data-value="storm_phaze_2">
+                                        <div class="ball-opt-main">Storm Phaze II</div>
+                                        <div class="ball-opt-sub">TX-16 Solid Reactive | Velocity Core (Symmetrical)</div>
+                                    </div>
+                                    <div class="ball-option-item" data-value="storm_hy_road">
+                                        <div class="ball-opt-main">Storm Hy-Road</div>
+                                        <div class="ball-opt-sub">R2S Hybrid | Inverted Fe² (Symmetrical)</div>
+                                    </div>
+                                    <div class="ball-option-item" data-value="storm_iq_tour_solid">
+                                        <div class="ball-opt-main">Storm !Q Tour Solid</div>
+                                        <div class="ball-opt-sub">Control Solid | Centripetal Core (Symmetrical)</div>
+                                    </div>
+                                    <div class="ball-option-item" data-value="storm_summit">
+                                        <div class="ball-opt-main">Storm Summit / Summit Peak</div>
+                                        <div class="ball-opt-sub">TX-23 Hybrid | Centripetal HD - A.I. Core</div>
+                                    </div>
+                                    <div class="ball-option-item" data-value="hammer_black_widow_2_0_hybrid">
+                                        <div class="ball-opt-main">Hammer Black Widow 2.0 Hybrid</div>
+                                        <div class="ball-opt-sub">HK22 Hybrid | Gas Mask (Asymmetrical)</div>
+                                    </div>
+                                    <div class="ball-option-item" data-value="hammer_black_widow_3_0">
+                                        <div class="ball-opt-main">Hammer Black Widow 3.0 Solid</div>
+                                        <div class="ball-opt-sub">HK22 Aggression Solid | Gas Mask (Asymmetrical)</div>
+                                    </div>
+                                    <div class="ball-option-item" data-value="hammer_purple_pearl_urethane">
+                                        <div class="ball-opt-main">Hammer Purple Pearl Urethane</div>
+                                        <div class="ball-opt-sub">Pearl Urethane | LED Core (Tour Control)</div>
+                                    </div>
+                                    <div class="ball-option-item" data-value="roto_grip_gem">
+                                        <div class="ball-opt-main">Roto Grip Exotic GEM / GEM</div>
+                                        <div class="ball-opt-sub">MicroTrax Solid/Pearl | Defiant LRG (Heavy Oil)</div>
+                                    </div>
+                                    <div class="ball-option-item" data-value="roto_grip_hustle_rip">
+                                        <div class="ball-opt-main">Roto Grip Hustle RIP / M+M</div>
+                                        <div class="ball-opt-sub">VTC Solid/Pearl | Hustle Core (Light-Medium Oil)</div>
+                                    </div>
+                                    <div class="ball-option-item" data-value="motiv_venom_shock">
+                                        <div class="ball-opt-main">Motiv Venom Shock</div>
+                                        <div class="ball-opt-sub">Turmoil MFS Solid | Gear Core (Benchmark)</div>
+                                    </div>
+                                    <div class="ball-option-item" data-value="motiv_jackal_ghost">
+                                        <div class="ball-opt-main">Motiv Jackal Ghost</div>
+                                        <div class="ball-opt-sub">Coercion HFS Solid | Predator V2 (Heavy Oil)</div>
+                                    </div>
+                                    <div class="ball-option-item" data-value="brunswick_tzone_spare">
+                                        <div class="ball-opt-main">Brunswick TZone / Plastic Spare</div>
+                                        <div class="ball-opt-sub">Polyester / Plastic | Bullet Core (Straight)</div>
+                                    </div>
+                                    <div class="ball-option-item" data-value="custom_generic_reactive">
+                                        <div class="ball-opt-main">Standard Reactive Resin</div>
+                                        <div class="ball-opt-sub">Generic Reactive | Symmetrical Core</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="control-group">

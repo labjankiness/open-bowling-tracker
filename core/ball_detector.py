@@ -108,6 +108,81 @@ BALL_DATABASE: Dict[str, Dict[str, Any]] = {
             {"name": "orange", "lower": (10, 100, 100), "upper": (25, 255, 255)},
         ]
     },
+    "storm_iq_tour_solid": {
+        "id": "storm_iq_tour_solid",
+        "name": "Storm !Q Tour Solid",
+        "brand": "Storm",
+        "coverstock": "C3 Centripetal Core (Symmetrical)",
+        "core": "Centripetal Core",
+        "finish": "4000-grit Abralon",
+        "rg": 2.49,
+        "diff": 0.029,
+        "hook_potential": "Smooth Benchmark Benchmark Arc",
+        "typical_colors": ["midnight_blue"],
+        "color_hsv_ranges": [
+            {"name": "navy_blue", "lower": (105, 80, 30), "upper": (125, 255, 150)},
+        ]
+    },
+    "storm_summit": {
+        "id": "storm_summit",
+        "name": "Storm Summit / Summit Peak",
+        "brand": "Storm",
+        "coverstock": "TX-23 Hybrid Reactive",
+        "core": "Centripetal HD - A.I. Core",
+        "finish": "3000-grit Abralon",
+        "rg": 2.46,
+        "diff": 0.056,
+        "hook_potential": "Strong Midlane Torque",
+        "typical_colors": ["blue", "black", "gold"],
+        "color_hsv_ranges": [
+            {"name": "gold_amber", "lower": (20, 100, 100), "upper": (35, 255, 255)},
+        ]
+    },
+    "hammer_black_widow_3_0": {
+        "id": "hammer_black_widow_3_0",
+        "name": "Hammer Black Widow 3.0 Solid",
+        "brand": "Hammer",
+        "coverstock": "HK22 - Aggression Solid",
+        "core": "Gas Mask (Asymmetrical)",
+        "finish": "500 / 1000 / 2000 Siaair",
+        "rg": 2.50,
+        "diff": 0.058,
+        "hook_potential": "Maximum Heavy Oil Traction",
+        "typical_colors": ["black", "orange"],
+        "color_hsv_ranges": [
+            {"name": "orange", "lower": (10, 120, 120), "upper": (25, 255, 255)},
+        ]
+    },
+    "roto_grip_hustle_rip": {
+        "id": "roto_grip_hustle_rip",
+        "name": "Roto Grip Hustle RIP / M+M",
+        "brand": "Roto Grip",
+        "coverstock": "VTC Solid / Pearl",
+        "core": "Hustle Core (Symmetrical)",
+        "finish": "Reacta Gloss",
+        "rg": 2.53,
+        "diff": 0.030,
+        "hook_potential": "Light-Medium Oil Control",
+        "typical_colors": ["magenta", "purple"],
+        "color_hsv_ranges": [
+            {"name": "magenta", "lower": (145, 80, 80), "upper": (165, 255, 255)},
+        ]
+    },
+    "motiv_jackal_ghost": {
+        "id": "motiv_jackal_ghost",
+        "name": "Motiv Jackal Ghost",
+        "brand": "Motiv",
+        "coverstock": "Coercion HFS Solid Reactive",
+        "core": "Predator V2 (Asymmetrical)",
+        "finish": "3000-grit LSS",
+        "rg": 2.47,
+        "diff": 0.054,
+        "hook_potential": "Extreme Heavy Oil Continuous",
+        "typical_colors": ["black", "purple"],
+        "color_hsv_ranges": [
+            {"name": "purple", "lower": (130, 60, 50), "upper": (155, 255, 230)},
+        ]
+    },
     "brunswick_tzone_spare": {
         "id": "brunswick_tzone_spare",
         "name": "Brunswick TZone / Plastic Spare Ball",

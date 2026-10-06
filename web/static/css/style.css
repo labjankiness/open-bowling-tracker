@@ -1316,3 +1316,121 @@ select:focus, input:focus {
     }
 }
 
+/* --- Searchable Bowling Ball Combobox --- */
+.searchable-ball-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.ball-search-trigger {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--input-bg, #0f172a);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    color: var(--text-color, #fff);
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+    user-select: none;
+}
+
+.ball-search-trigger:hover,
+.ball-search-trigger:focus {
+    border-color: #6366f1;
+}
+
+.ball-trigger-text {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ball-trigger-arrow {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-left: 8px;
+}
+
+.ball-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: var(--card-bg, #1e293b);
+    border: 1px solid var(--card-border, #334155);
+    border-radius: var(--radius-md);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6);
+    z-index: 50;
+    overflow: hidden;
+    animation: fadeInMenu 0.15s ease-out;
+}
+
+@keyframes fadeInMenu {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.ball-search-box {
+    padding: 8px 10px;
+    background: rgba(15, 23, 42, 0.8);
+    border-bottom: 1px solid var(--card-border);
+}
+
+.ball-search-box input {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--input-bg, #0f172a);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    color: #fff;
+    font-size: 0.85rem;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.ball-search-box input:focus {
+    border-color: #6366f1;
+}
+
+.ball-options-list {
+    max-height: 240px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.ball-option-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.ball-option-item:last-child {
+    border-bottom: none;
+}
+
+.ball-option-item:hover {
+    background: rgba(99, 102, 241, 0.15);
+}
+
+.ball-option-item.selected {
+    background: rgba(99, 102, 241, 0.25);
+    border-left: 3px solid #6366f1;
+}
+
+.ball-opt-main {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #f8fafc;
+}
+
+.ball-opt-sub {
+    font-size: 0.75rem;
+    color: var(--text-muted, #94a3b8);
+    margin-top: 2px;
+}
+
