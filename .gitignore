@@ -9,6 +9,8 @@ data/thumbnails/*
 !data/thumbnails/.gitkeep
 logs/metrics_log.csv
 logs/game_log.csv
+data/batch_status.json
+data/gpu_benchmark_report.json
 models/*.task
 .DS_Store
 

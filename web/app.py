@@ -643,7 +643,7 @@ async def save_gdrive_settings(
     return {"status": "ok", "settings": settings}
 
 
-TRAINING_VIDEOS_DIR = Path("/mnt/c/Users/Generate(_)/OneDrive/Videos/Bowling Videos for training")
+TRAINING_VIDEOS_DIR = config.TRAINING_VIDEOS_DIR
 
 
 @app.get("/api/thumbnail/{filename}")

@@ -60,6 +60,30 @@ document.addEventListener('DOMContentLoaded', () => {
         btnStart.removeAttribute('disabled');
     }
 
+    // Load saved bowler profile from localStorage if available
+    const savedHandedness = localStorage.getItem('bowlerHandedness');
+    const savedStyle = localStorage.getItem('deliveryStyle');
+    const handednessSelect = document.getElementById('bowlerHandedness');
+    const styleSelect = document.getElementById('deliveryStyle');
+
+    if (savedHandedness && handednessSelect) {
+        handednessSelect.value = savedHandedness;
+    }
+    if (savedStyle && styleSelect) {
+        styleSelect.value = savedStyle;
+    }
+
+    if (handednessSelect) {
+        handednessSelect.addEventListener('change', (e) => {
+            localStorage.setItem('bowlerHandedness', e.target.value);
+        });
+    }
+    if (styleSelect) {
+        styleSelect.addEventListener('change', (e) => {
+            localStorage.setItem('deliveryStyle', e.target.value);
+        });
+    }
+
     // Submit / Upload Form
     uploadForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -820,4 +844,121 @@ document.addEventListener('DOMContentLoaded', () => {
     // Poll batch status every 2.5 seconds
     pollBatchStatus();
     setInterval(pollBatchStatus, 2500);
+
+    // --- Multi-Source Cloud Pickers (OneDrive & Google Drive) ---
+    const btnPickOneDrive = document.getElementById('btnPickOneDrive');
+    const btnConfigOneDrive = document.getElementById('btnConfigOneDrive');
+    const btnPickGDrive = document.getElementById('btnPickGDrive');
+    const onedriveModal = document.getElementById('onedriveModal');
+    const btnCloseOneDriveModal = document.getElementById('btnCloseOneDriveModal');
+    const btnCancelOneDrive = document.getElementById('btnCancelOneDrive');
+    const btnSaveOneDrive = document.getElementById('btnSaveOneDrive');
+    const odClientIdInput = document.getElementById('odClientId');
+
+    // Load saved OneDrive client ID from localStorage
+    if (odClientIdInput) {
+        odClientIdInput.value = localStorage.getItem('onedrive_client_id') || '';
+    }
+
+    if (btnConfigOneDrive && onedriveModal) {
+        btnConfigOneDrive.addEventListener('click', () => {
+            onedriveModal.classList.remove('hidden');
+        });
+    }
+
+    if (btnCloseOneDriveModal && onedriveModal) {
+        btnCloseOneDriveModal.addEventListener('click', () => onedriveModal.classList.add('hidden'));
+    }
+
+    if (btnCancelOneDrive && onedriveModal) {
+        btnCancelOneDrive.addEventListener('click', () => onedriveModal.classList.add('hidden'));
+    }
+
+    if (btnSaveOneDrive && odClientIdInput && onedriveModal) {
+        btnSaveOneDrive.addEventListener('click', () => {
+            const cid = odClientIdInput.value.trim();
+            localStorage.setItem('onedrive_client_id', cid);
+            onedriveModal.classList.add('hidden');
+            alert('OneDrive Client ID saved! You can now use the OneDrive button.');
+        });
+    }
+
+    // Launch Microsoft OneDrive File Picker
+    if (btnPickOneDrive) {
+        btnPickOneDrive.addEventListener('click', () => {
+            const clientId = localStorage.getItem('onedrive_client_id');
+            if (!clientId) {
+                if (onedriveModal) {
+                    onedriveModal.classList.remove('hidden');
+                    alert('Please enter your Microsoft Azure App Client ID to connect to OneDrive.');
+                }
+                return;
+            }
+
+            if (typeof OneDrive === 'undefined') {
+                alert('OneDrive SDK is still loading. Please check your internet connection or try again in a few seconds.');
+                return;
+            }
+
+            const odOptions = {
+                clientId: clientId,
+                action: 'download',
+                multiSelect: false,
+                advanced: {
+                    filter: '.mp4,.mov,.m4v'
+                },
+                success: function(files) {
+                    if (files && files.values && files.values.length > 0) {
+                        const fileMeta = files.values[0];
+                        const downloadUrl = fileMeta['@microsoft.graph.downloadUrl'];
+                        const fileName = fileMeta.name;
+                        
+                        selectedFileName.textContent = `[OneDrive] ${fileName}`;
+                        selectedFileSize.textContent = `${(fileMeta.size / (1024 * 1024)).toFixed(1)} MB`;
+                        selectedFileInfo.classList.remove('hidden');
+                        btnStart.removeAttribute('disabled');
+
+                        // Fetch file blob from downloadUrl and prepare for uploadForm
+                        statusMessage.textContent = 'Streaming file from OneDrive...';
+                        fetch(downloadUrl)
+                            .then(res => res.blob())
+                            .then(blob => {
+                                currentFile = new File([blob], fileName, { type: blob.type || 'video/mp4' });
+                                console.log('OneDrive video loaded:', fileName, currentFile.size);
+                            })
+                            .catch(err => {
+                                console.error('Error fetching OneDrive file:', err);
+                                alert('Could not stream video directly from OneDrive: ' + err.message);
+                            });
+                    }
+                },
+                cancel: function() {
+                    console.log('OneDrive picker cancelled by user');
+                },
+                error: function(e) {
+                    console.error('OneDrive picker error:', e);
+                    alert('OneDrive error: ' + (e.message || JSON.stringify(e)));
+                }
+            };
+
+            OneDrive.open(odOptions);
+        });
+    }
+
+    // Google Drive Picker Shortcut
+    if (btnPickGDrive) {
+        btnPickGDrive.addEventListener('click', () => {
+            const libraryModal = document.getElementById('libraryModal');
+            if (libraryModal) {
+                libraryModal.classList.remove('hidden');
+                loadLibrary();
+                const tabDrive = document.getElementById('tabDrive');
+                const libraryListDrive = document.getElementById('libraryListDrive');
+                if (tabDrive && libraryListDrive) {
+                    switchLibraryTab(tabDrive, libraryListDrive);
+                }
+            }
+        });
+    }
 });
+

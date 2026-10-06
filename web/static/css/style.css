@@ -1036,8 +1036,39 @@ select:focus, input:focus {
     font-size: 0.9rem;
 }
 
+/* Multi-Source Cloud Upload Toolbar */
+.cloud-upload-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.cloud-upload-toolbar .toolbar-label {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.cloud-upload-toolbar .cloud-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    transition: all 0.2s;
+}
+
+.cloud-upload-toolbar .cloud-btn:hover {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.4);
+}
+
 /* Approach Phase Timeline Scrubber */
 .phase-timeline-card {
+
     margin-top: 16px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);

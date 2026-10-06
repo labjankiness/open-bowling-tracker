@@ -142,6 +142,25 @@ python scripts/batch_annotate.py --handedness left --style 2-handed --speed-fact
 python scripts/batch_annotate.py --max 1
 ```
 
+### 5. Multi-Source Upload & Cloud Integration
+The platform supports multi-source uploads directly from the dashboard:
+- **Local Drag & Drop**: Instant file streaming and progress indication.
+- **Microsoft OneDrive Picker**: Direct integration via the Microsoft OneDrive Picker v7.2 SDK.
+- **Google Drive Sync**: Service account / user authentication sync for video datasets.
+
+### 6. Approach Timing & Phase Synchronizer Model
+The approach timing model decomposes each shot into 5 biomechanical milestones:
+1. `Pushaway`
+2. `Top Apex` (highest point of backswing)
+3. `Power Step` (pre-slide stride)
+4. `Release`
+5. `Finish Hold` (balance hold)
+
+To train or benchmark the Temporal Convolutional Network (TCN) on your hardware (CPU, AMD DirectML, or NVIDIA CUDA):
+```bash
+python scripts/train_timing_gpu.py
+```
+
 ---
 
 ## 📂 Project Structure
@@ -153,6 +172,7 @@ live-bowling-tracker/
 ├── core/
 │   ├── tracker.py              # Biomechanics tracker orchestrator
 │   ├── analytics.py            # Vector math for angles, speeds & rev rate
+│   ├── timing_model.py         # 5-phase approach timing & balance synchronizer
 │   ├── pose_estimator.py       # MediaPipe Pose Tasks API wrapper
 │   ├── media_meta.py           # Thumbnail generator & ISO-6709 GPS extractor
 │   ├── pin_detector.py         # Pin deck CV analyzer
@@ -160,7 +180,8 @@ live-bowling-tracker/
 │   └── scoring.py              # Scorecard rules engine
 ├── scripts/
 │   ├── batch_annotate.py       # Batch annotation runner with skip & deduplication logic
-│   └── train_baseline.py       # Personal bowler baseline profiling script
+│   ├── train_baseline.py       # Personal bowler baseline profiling script
+│   └── train_timing_gpu.py     # Dual-GPU / DirectML / CPU TCN benchmark & trainer
 ├── web/
 │   ├── app.py                  # FastAPI server & REST API
 │   ├── auth.py                 # Passcode authentication & session management
@@ -181,4 +202,4 @@ live-bowling-tracker/
 ---
 
 ## 📄 License & Notes
-Private repository developed for personal bowling training and product development.
+Open source bowling biomechanics analysis template. Decoupled from private proprietary training videos.

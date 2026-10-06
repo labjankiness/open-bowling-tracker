@@ -1,14 +1,17 @@
-"""Project-wide constants for the Live Bowling Tracker."""
-
+import os
 from pathlib import Path
+
 
 # --- Paths ---
 PROJECT_ROOT = Path(__file__).resolve().parent
 DATA_INPUT_DIR = PROJECT_ROOT / "data" / "input"
 DATA_OUTPUT_DIR = PROJECT_ROOT / "data" / "output"
+DATA_THUMBNAILS_DIR = PROJECT_ROOT / "data" / "thumbnails"
+TRAINING_VIDEOS_DIR = Path(os.environ.get("TRAINING_VIDEOS_DIR", str(PROJECT_ROOT / "data" / "training_videos")))
 LOGS_DIR = PROJECT_ROOT / "logs"
 METRICS_LOG_PATH = LOGS_DIR / "metrics_log.csv"
 GAME_LOG_PATH = LOGS_DIR / "game_log.csv"
+
 
 # --- MediaPipe Pose landmark indices used by the analytics core ---
 LEFT_SHOULDER = 11
