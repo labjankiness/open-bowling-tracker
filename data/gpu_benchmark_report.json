@@ -1,0 +1,38 @@
+[
+  {
+    "device_id": "directml:0",
+    "device_name": "NVIDIA GeForce RTX 5060 Ti\u0000",
+    "device_type": "NVIDIA DirectML (DirectX 12)",
+    "num_epochs": 12,
+    "batch_size": 32,
+    "total_time_s": 14.78,
+    "samples_per_sec": 974.3,
+    "kinematic_fps": 87687.0,
+    "ms_per_step": 32.41,
+    "final_loss": 7.8894
+  },
+  {
+    "device_id": "directml:1",
+    "device_name": "Radeon RX 580 Series\u0000",
+    "device_type": "AMD DirectML (DirectX 12)",
+    "num_epochs": 12,
+    "batch_size": 32,
+    "total_time_s": 53.09,
+    "samples_per_sec": 271.3,
+    "kinematic_fps": 24417.0,
+    "ms_per_step": 116.42,
+    "final_loss": 8.2253
+  },
+  {
+    "device_id": "cpu",
+    "device_name": "Host CPU (20 Cores)",
+    "device_type": "CPU Baseline",
+    "num_epochs": 12,
+    "batch_size": 32,
+    "total_time_s": 4.23,
+    "samples_per_sec": 3402.3,
+    "kinematic_fps": 306207.0,
+    "ms_per_step": 9.28,
+    "final_loss": 7.7426
+  }
+]
