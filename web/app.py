@@ -278,7 +278,28 @@ def generate_bowling_advice(summary: dict, history: list, handedness: str = "lef
             "message": f"Ball clears approximately {board_est} boards outside your {slide_side}, driving toward the {target_pocket}."
         })
 
+    # 5. Approach Timing & Finish Balance
+    phases = summary.get("approach_phases")
+    if phases:
+        t_eval = phases.get("timing_evaluation", "Synchronized")
+        ratio = phases.get("timing_ratio", 1.8)
+        bal_score = phases.get("balance_score", 85)
+        b_badge = "success" if bal_score >= 80 else ("info" if bal_score >= 70 else "warning")
+        advice.append({
+            "category": "Approach Rhythm & Synchronizer",
+            "status": f"Ratio: {ratio:.2f}",
+            "badge": "success" if "Sweet Spot" in t_eval else "info",
+            "message": f"Backswing vs Downswing: {t_eval} (Ratio: {ratio:.2f})."
+        })
+        advice.append({
+            "category": "Finish Leverage & Balance Hold",
+            "status": f"Score: {bal_score}/100",
+            "badge": b_badge,
+            "message": f"Finish stability rating is {bal_score}/100. Right slide knee held with solid trail leg counter-balance."
+        })
+
     return advice
+
 
 
 # --- Background Worker ---
@@ -400,6 +421,37 @@ def run_video_job(
                 "lateral_ball_ankle_distance_px": lateral_px,
             }
 
+            # 3b. Detect Approach Phases & Rhythm Timing
+            from core.timing_model import detect_approach_phases
+            phases_obj = detect_approach_phases(
+                history=tracker.history,
+                fps=tracker.fps or 30.0,
+                handedness=tracker.resolved_handedness,
+                speed_multiplier=multiplier
+            )
+
+            if phases_obj:
+                summary_dict["approach_phases"] = {
+                    "pushaway_frame": phases_obj.pushaway_frame,
+                    "pushaway_time_s": phases_obj.pushaway_time_s,
+                    "apex_frame": phases_obj.apex_frame,
+                    "apex_time_s": phases_obj.apex_time_s,
+                    "power_step_frame": phases_obj.power_step_frame,
+                    "power_step_time_s": phases_obj.power_step_time_s,
+                    "release_frame": phases_obj.release_frame,
+                    "release_time_s": phases_obj.release_time_s,
+                    "finish_frame": phases_obj.finish_frame,
+                    "finish_time_s": phases_obj.finish_time_s,
+                    "backswing_duration_s": phases_obj.backswing_duration_s,
+                    "downswing_duration_s": phases_obj.downswing_duration_s,
+                    "timing_ratio": phases_obj.timing_ratio,
+                    "timing_evaluation": phases_obj.timing_evaluation,
+                    "trail_leg_sweep_deg": phases_obj.trail_leg_sweep_deg,
+                    "balance_score": phases_obj.balance_score,
+                }
+            else:
+                summary_dict["approach_phases"] = None
+
             job["summary"] = summary_dict
             job["history"] = history_data
             job["frame_count"] = tracker.frame_count
@@ -408,6 +460,7 @@ def run_video_job(
                 handedness=tracker.resolved_handedness,
                 style=tracker.resolved_style
             )
+
 
         # 3. Pin Deck Scoring
         if mode in ("score", "both"):

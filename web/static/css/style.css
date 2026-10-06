@@ -1036,9 +1036,98 @@ select:focus, input:focus {
     font-size: 0.9rem;
 }
 
+/* Approach Phase Timeline Scrubber */
+.phase-timeline-card {
+    margin-top: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
+    padding: 14px 18px;
+}
+
+.phase-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.phase-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.phase-subtitle {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.phase-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 10px;
+}
+
+.phase-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 10px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--text-main);
+}
+
+.phase-btn:hover {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.4);
+    transform: translateY(-2px);
+}
+
+.phase-btn.highlight {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.35);
+}
+
+.phase-btn.highlight:hover {
+    background: rgba(16, 185, 129, 0.25);
+    border-color: rgba(16, 185, 129, 0.6);
+}
+
+.phase-btn .phase-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #6366f1;
+}
+
+.phase-btn.highlight .phase-dot {
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
+.phase-btn .phase-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.phase-btn .phase-stamp {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-family: monospace;
+}
+
 @media (max-width: 768px) {
     .results-grid {
         grid-template-columns: 1fr;
+    }
+    .phase-buttons {
+        grid-template-columns: repeat(3, 1fr);
     }
     .app-header {
         padding: 16px;
@@ -1047,3 +1136,4 @@ select:focus, input:focus {
         padding: 0 16px;
     }
 }
+

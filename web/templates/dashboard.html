@@ -202,6 +202,16 @@
                         <span class="stat-value" id="valKneeFlex">--</span>
                         <span class="stat-unit">degrees</span>
                     </div>
+                    <div class="stat-box highlight-box">
+                        <span class="stat-label">Timing Ratio</span>
+                        <span class="stat-value" id="valTimingRatio">--</span>
+                        <span class="stat-unit">back/downswing</span>
+                    </div>
+                    <div class="stat-box highlight-box">
+                        <span class="stat-label">Balance Hold</span>
+                        <span class="stat-value" id="valBalanceScore">--</span>
+                        <span class="stat-unit">/ 100 score</span>
+                    </div>
                 </div>
 
                 <!-- AI Bowling Coach Advice Panel -->
@@ -256,7 +266,7 @@
                 <div id="scorecardNote" class="scorecard-note hidden"></div>
             </div>
 
-            <!-- Video Player -->
+            <!-- Video Player & Phase Scrubber -->
             <div class="card video-card">
                 <div class="card-header-inline">
                     <h3>Annotated Video Playback</h3>
@@ -267,7 +277,43 @@
                 <div class="video-container">
                     <video id="resultVideo" controls playsinline></video>
                 </div>
+
+                <!-- Interactive Approach Phase Markers -->
+                <div id="phaseTimelineContainer" class="phase-timeline-card hidden">
+                    <div class="phase-header">
+                        <span class="phase-title">⏱ Approach Phase Synchronizer</span>
+                        <span class="phase-subtitle">Click to jump to key delivery frames</span>
+                    </div>
+                    <div class="phase-buttons" id="phaseButtons">
+                        <button type="button" class="phase-btn" id="btnPhasePushaway" data-time="0">
+                            <span class="phase-dot"></span>
+                            <span class="phase-name">Pushaway</span>
+                            <span class="phase-stamp" id="stampPushaway">--</span>
+                        </button>
+                        <button type="button" class="phase-btn" id="btnPhaseApex" data-time="0">
+                            <span class="phase-dot"></span>
+                            <span class="phase-name">Top Apex</span>
+                            <span class="phase-stamp" id="stampApex">--</span>
+                        </button>
+                        <button type="button" class="phase-btn" id="btnPhasePowerStep" data-time="0">
+                            <span class="phase-dot"></span>
+                            <span class="phase-name">Power Step</span>
+                            <span class="phase-stamp" id="stampPowerStep">--</span>
+                        </button>
+                        <button type="button" class="phase-btn highlight" id="btnPhaseRelease" data-time="0">
+                            <span class="phase-dot"></span>
+                            <span class="phase-name">Release</span>
+                            <span class="phase-stamp" id="stampRelease">--</span>
+                        </button>
+                        <button type="button" class="phase-btn" id="btnPhaseFinish" data-time="0">
+                            <span class="phase-dot"></span>
+                            <span class="phase-name">Finish Hold</span>
+                            <span class="phase-stamp" id="stampFinish">--</span>
+                        </button>
+                    </div>
+                </div>
             </div>
+
 
             <!-- Frame-by-Frame Biomechanics Chart -->
             <div class="card chart-card">

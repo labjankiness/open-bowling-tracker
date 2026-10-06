@@ -165,6 +165,17 @@ document.addEventListener('DOMContentLoaded', () => {
             ? summary.knee_flexion_at_release_deg.toFixed(1) + '°' 
             : '--';
 
+        const phases = summary.approach_phases;
+        const valTimingRatio = document.getElementById('valTimingRatio');
+        const valBalanceScore = document.getElementById('valBalanceScore');
+        if (phases) {
+            if (valTimingRatio) valTimingRatio.textContent = phases.timing_ratio != null ? phases.timing_ratio.toFixed(2) : '--';
+            if (valBalanceScore) valBalanceScore.textContent = phases.balance_score != null ? `${phases.balance_score}/100` : '--';
+        } else {
+            if (valTimingRatio) valTimingRatio.textContent = '--';
+            if (valBalanceScore) valBalanceScore.textContent = '--';
+        }
+
         // AI Bowling Coach Breakdown
         const coachSection = document.getElementById('coachAdviceSection');
         const coachList = document.getElementById('coachAdviceList');
@@ -187,14 +198,44 @@ document.addEventListener('DOMContentLoaded', () => {
             coachSection.classList.add('hidden');
         }
 
-        // Video Player
+        // Video Player & Phase Scrubber
+        const videoElem = document.getElementById('resultVideo');
         if (job.annotated_video_url) {
-            const videoElem = document.getElementById('resultVideo');
             videoElem.src = job.annotated_video_url;
             videoElem.load();
             videoElem.play().catch(e => console.log('Autoplay deferred:', e));
             document.getElementById('btnDownloadVideo').href = job.annotated_video_url;
         }
+
+        // Setup Phase Timeline Scrubber
+        const phaseContainer = document.getElementById('phaseTimelineContainer');
+        if (phases && phaseContainer) {
+            phaseContainer.classList.remove('hidden');
+
+            const bindPhaseBtn = (btnId, stampId, timeVal) => {
+                const btn = document.getElementById(btnId);
+                const stamp = document.getElementById(stampId);
+                if (btn && timeVal != null) {
+                    btn.setAttribute('data-time', timeVal);
+                    if (stamp) stamp.textContent = `${timeVal.toFixed(1)}s`;
+                    btn.onclick = () => {
+                        if (videoElem) {
+                            videoElem.currentTime = timeVal;
+                            videoElem.play().catch(() => {});
+                        }
+                    };
+                }
+            };
+
+            bindPhaseBtn('btnPhasePushaway', 'stampPushaway', phases.pushaway_time_s);
+            bindPhaseBtn('btnPhaseApex', 'stampApex', phases.apex_time_s);
+            bindPhaseBtn('btnPhasePowerStep', 'stampPowerStep', phases.power_step_time_s);
+            bindPhaseBtn('btnPhaseRelease', 'stampRelease', phases.release_time_s);
+            bindPhaseBtn('btnPhaseFinish', 'stampFinish', phases.finish_time_s);
+        } else if (phaseContainer) {
+            phaseContainer.classList.add('hidden');
+        }
+
 
         // Google Drive Banner
         const driveBanner = document.getElementById('driveResultBanner');
