@@ -4,20 +4,18 @@ from core.ball_detector import BALL_DATABASE, get_all_balls, get_ball_info, calc
 import numpy as np
 
 
-def test_catalog_has_all_four_brands():
+def test_catalog_has_all_brands():
     balls = get_all_balls()
-    assert len(balls) >= 1300
+    assert len(balls) >= 1700
 
     brands = set(b.get("brand") for b in balls)
-    assert "Hammer" in brands
-    assert "Storm" in brands
-    assert "Ebonite" in brands
-    assert "Radical" in brands
+    for b in ["Hammer", "Storm", "Brunswick", "Motiv", "Ebonite", "Radical"]:
+        assert b in brands, f"{b} should be in catalog"
 
 
 def test_brands_have_current_and_retired_balls():
     balls = get_all_balls()
-    for brand in ["Hammer", "Storm", "Ebonite", "Radical"]:
+    for brand in ["Hammer", "Storm", "Brunswick", "Motiv", "Ebonite", "Radical"]:
         brand_balls = [b for b in balls if b.get("brand") == brand]
         statuses = set(b.get("status") for b in brand_balls)
         assert "Current" in statuses, f"{brand} should have Current balls"

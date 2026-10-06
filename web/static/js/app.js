@@ -100,6 +100,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const b = (brand || '').toLowerCase();
         if (b.includes('hammer')) return 'ball-brand-hammer';
         if (b.includes('storm')) return 'ball-brand-storm';
+        if (b.includes('brunswick')) return 'ball-brand-brunswick';
+        if (b.includes('motiv')) return 'ball-brand-motiv';
         if (b.includes('ebonite')) return 'ball-brand-ebonite';
         if (b.includes('radical')) return 'ball-brand-radical';
         return 'ball-brand-default';

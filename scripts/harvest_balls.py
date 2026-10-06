@@ -260,7 +260,9 @@ def harvest_all():
         'Storm': 4012,
         'Hammer': 4180,
         'Ebonite': 4144,
-        'Radical': 4223
+        'Radical': 4223,
+        'Brunswick': 4063,
+        'Motiv': 4292
     }
 
     for bname, bid in bowwwl_brands.items():
@@ -361,7 +363,7 @@ def harvest_all():
     # 4. Harvest Sitemaps for Remaining Slugs (Legacy / Retired Archive)
     # ---------------------------------------------------------
     print("Checking Bowwwl sitemaps for remaining archived slugs...")
-    sitemap_balls = {'Storm': set(), 'Hammer': set(), 'Ebonite': set(), 'Radical': set()}
+    sitemap_balls = {'Storm': set(), 'Hammer': set(), 'Ebonite': set(), 'Radical': set(), 'Brunswick': set(), 'Motiv': set()}
     for p in [1, 2, 3]:
         try:
             s_url = f"https://www.bowwwl.com/sitemap.xml?page={p}"
@@ -383,7 +385,6 @@ def harvest_all():
             ball_id = f"{bname.lower()}_{slug}".replace('-', '_')
             if ball_id not in catalog:
                 ball_name = slug_to_name(slug)
-                # Deduce cover type from name
                 name_l = ball_name.lower()
                 cov_t = 'Reactive'
                 if 'urethane' in name_l:
@@ -404,7 +405,7 @@ def harvest_all():
                     'coverstock': f"{bname} Formula",
                     'coverstock_type': cov_t,
                     'core': f"{bname} Core",
-                    'core_type': 'Asymmetric' if any(w in name_l for w in ['asym', 'max', 'lock', 'crux', 'widow', 'bias']) else 'Symmetric',
+                    'core_type': 'Asymmetric' if any(w in name_l for w in ['asym', 'max', 'lock', 'crux', 'widow', 'bias', 'jackal']) else 'Symmetric',
                     'rg': 2.50,
                     'diff': 0.045,
                     'finish': 'Box Finish',
@@ -417,7 +418,7 @@ def harvest_all():
 
     print(f"\n==========================================")
     print(f"Total Unique Balls Harvested: {len(catalog)}")
-    for b in ['Hammer', 'Storm', 'Ebonite', 'Radical']:
+    for b in ['Hammer', 'Storm', 'Ebonite', 'Radical', 'Brunswick', 'Motiv']:
         b_count = sum(1 for v in catalog.values() if v['brand'] == b)
         print(f"  {b}: {b_count} balls")
     print(f"==========================================")

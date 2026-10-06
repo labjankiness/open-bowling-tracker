@@ -258,11 +258,11 @@ def get_all_balls() -> List[Dict[str, Any]]:
     brand_order = {
         "Hammer": 1,
         "Storm": 2,
-        "Ebonite": 3,
-        "Radical": 4,
-        "Roto Grip": 5,
-        "Motiv": 6,
-        "Brunswick": 7
+        "Brunswick": 3,
+        "Motiv": 4,
+        "Ebonite": 5,
+        "Radical": 6,
+        "Roto Grip": 7
     }
     return sorted(
         list(BALL_DATABASE.values()),
