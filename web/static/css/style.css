@@ -1434,3 +1434,141 @@ select:focus, input:focus {
     margin-top: 2px;
 }
 
+/* --- My Arsenal & PAP Configuration Modal --- */
+.modal-box.modal-lg {
+    max-width: 760px;
+    width: 92%;
+    max-height: 88vh;
+    overflow-y: auto;
+}
+
+.pap-section-box {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.pap-header h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #f8fafc;
+}
+
+.pap-hint {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.pap-input-row {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+    align-items: flex-end;
+}
+
+.form-actions-inline {
+    margin-bottom: 18px;
+    display: flex;
+    flex-direction: column;
+}
+
+.arsenal-add-box {
+    background: rgba(30, 41, 59, 0.4);
+    border: 1px dashed var(--card-border);
+    border-radius: var(--radius-md);
+    padding: 18px;
+    margin-bottom: 24px;
+}
+
+.arsenal-add-box h4 {
+    margin: 0 0 14px 0;
+    font-size: 0.95rem;
+    color: #f8fafc;
+}
+
+.form-row-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.saved-arsenal-list-box h4 {
+    margin: 0 0 12px 0;
+    font-size: 0.95rem;
+}
+
+.arsenal-items-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.arsenal-card {
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    position: relative;
+    transition: border-color 0.2s ease, transform 0.15s ease;
+}
+
+.arsenal-card:hover {
+    border-color: #6366f1;
+    transform: translateY(-2px);
+}
+
+.arsenal-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 6px;
+}
+
+.arsenal-card-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #f8fafc;
+}
+
+.arsenal-delete-btn {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 2px 6px;
+}
+
+.arsenal-card-meta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.arsenal-badge-pill {
+    display: inline-block;
+    background: rgba(99, 102, 241, 0.2);
+    color: #818cf8;
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.arsenal-select-btn {
+    margin-top: 10px;
+    width: 100%;
+}
+
+@media (max-width: 640px) {
+    .pap-input-row,
+    .form-row-grid,
+    .arsenal-items-grid {
+        grid-template-columns: 1fr;
+        flex-direction: column;
+    }
+}
+

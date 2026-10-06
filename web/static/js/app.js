@@ -1259,5 +1259,170 @@ document.addEventListener('DOMContentLoaded', () => {
             compareVideoB.style.opacity = val;
         });
     }
+
+    // --- My Arsenal & PAP Layout Controller ---
+    const btnOpenArsenalModal = document.getElementById('btnOpenArsenalModal');
+    const btnCloseArsenalModal = document.getElementById('btnCloseArsenalModal');
+    const arsenalModal = document.getElementById('arsenalModal');
+    const papHorizontal = document.getElementById('papHorizontal');
+    const papVertical = document.getElementById('papVertical');
+    const btnSavePap = document.getElementById('btnSavePap');
+    const addArsenalBallForm = document.getElementById('addArsenalBallForm');
+    const arsenalItemsContainer = document.getElementById('arsenalItemsContainer');
+
+    // Load saved PAP
+    const savedPapH = localStorage.getItem('bowler_pap_h');
+    const savedPapV = localStorage.getItem('bowler_pap_v');
+    if (savedPapH && papHorizontal) papHorizontal.value = savedPapH;
+    if (savedPapV && papVertical) papVertical.value = savedPapV;
+
+    if (btnSavePap) {
+        btnSavePap.addEventListener('click', () => {
+            const h = papHorizontal ? papHorizontal.value.trim() : '';
+            const v = papVertical ? papVertical.value.trim() : '';
+            localStorage.setItem('bowler_pap_h', h);
+            localStorage.setItem('bowler_pap_v', v);
+            alert(`PAP saved: ${h} , ${v}`);
+        });
+    }
+
+    // Helper: Get Arsenal from localStorage
+    function getArsenal() {
+        try {
+            return JSON.parse(localStorage.getItem('bowling_arsenal') || '[]');
+        } catch {
+            return [];
+        }
+    }
+
+    function saveArsenal(arsenal) {
+        localStorage.setItem('bowling_arsenal', JSON.stringify(arsenal));
+        renderArsenalList();
+        updateBallPickerWithArsenal();
+    }
+
+    function renderArsenalList() {
+        if (!arsenalItemsContainer) return;
+        const arsenal = getArsenal();
+        arsenalItemsContainer.innerHTML = '';
+
+        if (arsenal.length === 0) {
+            arsenalItemsContainer.innerHTML = '<p class="text-muted" style="grid-column: 1 / -1; font-size: 0.85rem;">No custom layout balls saved yet. Add your first drilled ball above!</p>';
+            return;
+        }
+
+        arsenal.forEach((b, idx) => {
+            const card = document.createElement('div');
+            card.className = 'arsenal-card';
+            card.innerHTML = `
+                <div class="arsenal-card-header">
+                    <span class="arsenal-card-title">${b.nickname}</span>
+                    <button type="button" class="arsenal-delete-btn" data-idx="${idx}" title="Delete ball">&times;</button>
+                </div>
+                <div class="arsenal-card-meta">${b.base_name || b.base_id}</div>
+                <div class="arsenal-card-meta">
+                    <span class="arsenal-badge-pill">📐 ${b.layout_type.toUpperCase()}: ${b.layout}</span>
+                </div>
+                <div class="arsenal-card-meta">
+                    <span>✨ Surface: ${b.surface || 'Box'}</span>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline arsenal-select-btn" data-val="${b.base_id}" data-title="${b.nickname} (${b.layout})">
+                    Select for Delivery
+                </button>
+            `;
+            arsenalItemsContainer.appendChild(card);
+        });
+
+        // Attach delete handlers
+        arsenalItemsContainer.querySelectorAll('.arsenal-delete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(e.target.getAttribute('data-idx'));
+                const current = getArsenal();
+                current.splice(idx, 1);
+                saveArsenal(current);
+            });
+        });
+
+        // Attach select handlers
+        arsenalItemsContainer.querySelectorAll('.arsenal-select-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const val = e.target.getAttribute('data-val');
+                const title = e.target.getAttribute('data-title');
+                selectBallOption(val, title);
+                if (arsenalModal) arsenalModal.classList.add('hidden');
+            });
+        });
+    }
+
+    function updateBallPickerWithArsenal() {
+        if (!ballOptionsList) return;
+        const arsenal = getArsenal();
+        
+        // Remove previously appended custom items
+        ballOptionsList.querySelectorAll('.arsenal-custom-item').forEach(el => el.remove());
+
+        // Append custom arsenal balls at the top under Auto-Detect
+        const autoOpt = ballOptionsList.querySelector('.ball-option-item[data-value="auto"]');
+        if (autoOpt && arsenal.length > 0) {
+            arsenal.forEach(b => {
+                const item = document.createElement('div');
+                item.className = 'ball-option-item arsenal-custom-item';
+                item.setAttribute('data-value', b.base_id);
+                item.innerHTML = `
+                    <div class="ball-opt-main">🎳 ${b.nickname}</div>
+                    <div class="ball-opt-sub">My Arsenal | ${b.layout_type.toUpperCase()}: ${b.layout} (${b.surface})</div>
+                `;
+                autoOpt.insertAdjacentElement('afterend', item);
+            });
+        }
+    }
+
+    if (addArsenalBallForm) {
+        addArsenalBallForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const baseId = document.getElementById('arsenalBallModel').value;
+            const modelSelect = document.getElementById('arsenalBallModel');
+            const baseName = modelSelect.options[modelSelect.selectedIndex].text;
+            const nickname = document.getElementById('arsenalNickName').value.trim();
+            const layoutType = document.getElementById('arsenalLayoutType').value;
+            const layout = document.getElementById('arsenalLayoutNumbers').value.trim();
+            const surface = document.getElementById('arsenalSurface').value.trim();
+
+            const newBall = {
+                id: 'custom_' + Date.now(),
+                base_id: baseId,
+                base_name: baseName,
+                nickname: nickname,
+                layout_type: layoutType,
+                layout: layout,
+                surface: surface,
+                pap_h: localStorage.getItem('bowler_pap_h') || '',
+                pap_v: localStorage.getItem('bowler_pap_v') || '',
+            };
+
+            const currentArsenal = getArsenal();
+            currentArsenal.push(newBall);
+            saveArsenal(currentArsenal);
+
+            addArsenalBallForm.reset();
+            alert(`Saved "${nickname}" to your personal arsenal!`);
+        });
+    }
+
+    if (btnOpenArsenalModal && arsenalModal) {
+        btnOpenArsenalModal.addEventListener('click', () => {
+            arsenalModal.classList.remove('hidden');
+            renderArsenalList();
+        });
+    }
+
+    if (btnCloseArsenalModal && arsenalModal) {
+        btnCloseArsenalModal.addEventListener('click', () => {
+            arsenalModal.classList.add('hidden');
+        });
+    }
+
+    // Initial render of arsenal items in custom combobox
+    updateBallPickerWithArsenal();
 });
 

@@ -16,6 +16,9 @@
             <span class="badge">Live 24/7</span>
         </div>
         <div class="header-actions">
+            <button id="btnOpenArsenalModal" class="btn btn-outline">
+                <span class="icon">🎳</span> My Arsenal & PAP
+            </button>
             <button id="btnOpenLibrary" class="btn btn-outline">
                 <span class="icon">📂</span> Video Library
             </button>
@@ -587,6 +590,104 @@
                         <input type="range" id="compareGhostOpacity" min="0" max="100" value="50">
                         <span>Ghost Overlay Blend</span>
                     </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Arsenal & PAP Ball Configuration Modal -->
+    <div id="arsenalModal" class="modal-overlay hidden">
+        <div class="modal-box modal-lg">
+            <div class="modal-header">
+                <h3>🎳 My Bowling Ball Arsenal & PAP Layouts</h3>
+                <button id="btnCloseArsenalModal" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Bowler PAP Section -->
+                <div class="pap-section-box">
+                    <div class="pap-header">
+                        <h4>🎯 Bowler Positive Axis Point (PAP)</h4>
+                        <span class="pap-hint">Personal PAP coordinates from center of grip</span>
+                    </div>
+                    <div class="pap-input-row">
+                        <div class="form-group">
+                            <label for="papHorizontal">Horizontal Distance</label>
+                            <input type="text" id="papHorizontal" placeholder="e.g. 5 1/2 Right or 4 3/4 Left" value="5 1/4 Left">
+                        </div>
+                        <div class="form-group">
+                            <label for="papVertical">Vertical Distance</label>
+                            <input type="text" id="papVertical" placeholder="e.g. 1/2 Up or 3/4 Down" value="3/4 Up">
+                        </div>
+                        <div class="form-group form-actions-inline">
+                            <label>&nbsp;</label>
+                            <button type="button" id="btnSavePap" class="btn btn-sm btn-primary">Save PAP</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Custom Ball to Arsenal -->
+                <div class="arsenal-add-box">
+                    <h4>➕ Add / Configure a Ball with Custom Layout</h4>
+                    <form id="addArsenalBallForm">
+                        <div class="form-row-grid">
+                            <div class="form-group">
+                                <label for="arsenalBallModel">Base Ball Model</label>
+                                <select id="arsenalBallModel" class="input-select">
+                                    <option value="storm_phaze_2">Storm Phaze II (Solid)</option>
+                                    <option value="storm_hy_road">Storm Hy-Road (Hybrid)</option>
+                                    <option value="storm_iq_tour_solid">Storm !Q Tour Solid</option>
+                                    <option value="storm_summit">Storm Summit (Hybrid)</option>
+                                    <option value="hammer_black_widow_2_0_hybrid">Hammer Black Widow 2.0 (Asym)</option>
+                                    <option value="hammer_black_widow_3_0">Hammer Black Widow 3.0 Solid</option>
+                                    <option value="hammer_purple_pearl_urethane">Hammer Purple Pearl Urethane</option>
+                                    <option value="roto_grip_gem">Roto Grip GEM (Asym)</option>
+                                    <option value="roto_grip_hustle_rip">Roto Grip Hustle RIP</option>
+                                    <option value="motiv_venom_shock">Motiv Venom Shock</option>
+                                    <option value="motiv_jackal_ghost">Motiv Jackal Ghost</option>
+                                    <option value="brunswick_tzone_spare">Brunswick TZone / Plastic Spare</option>
+                                    <option value="custom_generic_reactive">Custom / Other Reactive Ball</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="arsenalNickName">Custom Nickname / Label</label>
+                                <input type="text" id="arsenalNickName" placeholder="e.g. Phaze II (Pin Up Benchmark)" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row-grid">
+                            <div class="form-group">
+                                <label for="arsenalLayoutType">Layout System</label>
+                                <select id="arsenalLayoutType" class="input-select">
+                                    <option value="dual_angle">Storm Dual Angle (Drilling × Pin-PAP × VAL)</option>
+                                    <option value="two_ls">2LS (2-Handed Layout System - Pin-PAP × Pin-COG × PSA)</option>
+                                    <option value="simple">Simple (Pin Distance & Angle)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="arsenalLayoutNumbers">Drilling Layout Specs</label>
+                                <input type="text" id="arsenalLayoutNumbers" placeholder="e.g. 50 x 4 x 35 or 4 x 4 x 2 1/2" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row-grid">
+                            <div class="form-group">
+                                <label for="arsenalSurface">Surface Prep / Finish</label>
+                                <input type="text" id="arsenalSurface" placeholder="e.g. 2000-grit TruCut Fresh or Box Finish" value="Box Finish">
+                            </div>
+                            <div class="form-group form-actions-inline">
+                                <label>&nbsp;</label>
+                                <button type="submit" class="btn btn-sm btn-primary">💾 Save to My Arsenal</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Saved Arsenal List -->
+                <div class="saved-arsenal-list-box">
+                    <h4>🎒 My Saved Arsenal</h4>
+                    <div id="arsenalItemsContainer" class="arsenal-items-grid">
+                        <!-- Dynamically populated arsenal cards -->
+                    </div>
                 </div>
             </div>
         </div>
