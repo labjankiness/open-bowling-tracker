@@ -85,13 +85,52 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Searchable Bowling Ball Combobox Controller
+    // Searchable Bowling Ball Combobox Controller & Full Brand Catalog
     const ballPickerTrigger = document.getElementById('ballPickerTrigger');
     const ballDropdownMenu = document.getElementById('ballDropdownMenu');
     const ballSearchFilter = document.getElementById('ballSearchFilter');
     const ballOptionsList = document.getElementById('ballOptionsList');
     const ballTriggerText = document.getElementById('ballTriggerText');
     const ballHiddenInput = document.getElementById('bowlingBall');
+
+    let allCatalogBalls = [];
+    const defaultBallOptionsHTML = ballOptionsList ? ballOptionsList.innerHTML : '';
+
+    function getBrandBadgeClass(brand) {
+        const b = (brand || '').toLowerCase();
+        if (b.includes('hammer')) return 'ball-brand-hammer';
+        if (b.includes('storm')) return 'ball-brand-storm';
+        if (b.includes('ebonite')) return 'ball-brand-ebonite';
+        if (b.includes('radical')) return 'ball-brand-radical';
+        return 'ball-brand-default';
+    }
+
+    function renderDynamicBallItem(b) {
+        const div = document.createElement('div');
+        div.className = 'ball-option-item';
+        if (ballHiddenInput && ballHiddenInput.value === b.id) {
+            div.classList.add('selected');
+        }
+        div.setAttribute('data-value', b.id);
+        const brandClass = getBrandBadgeClass(b.brand);
+        const statusClass = (b.status === 'Retired') ? 'ball-status-retired' : 'ball-status-current';
+        const statusText = b.status || 'Current';
+        const specs = [];
+        if (b.coverstock) specs.push(b.coverstock);
+        if (b.core) specs.push(b.core);
+        if (b.rg) specs.push(`RG: ${b.rg}`);
+        if (b.diff) specs.push(`Diff: ${b.diff}`);
+
+        div.innerHTML = `
+            <div class="ball-opt-main">
+                ${b.name}
+                <span class="ball-brand-badge ${brandClass}">${b.brand}</span>
+                <span class="ball-status-pill ${statusClass}">${statusText}</span>
+            </div>
+            <div class="ball-opt-sub">${specs.join(' | ')}</div>
+        `;
+        return div;
+    }
 
     function selectBallOption(val, text) {
         if (ballHiddenInput) ballHiddenInput.value = val;
@@ -130,16 +169,74 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function filterBallOptions(query) {
         if (!ballOptionsList) return;
-        const q = query.toLowerCase().trim();
-        const items = ballOptionsList.querySelectorAll('.ball-option-item');
-        items.forEach(item => {
-            const text = item.textContent.toLowerCase();
-            if (!q || text.includes(q)) {
-                item.style.display = 'block';
-            } else {
-                item.style.display = 'none';
+        const q = (query || '').toLowerCase().trim();
+
+        if (!q) {
+            // Restore default list (Auto-detect + top benchmark balls) + custom arsenal balls
+            ballOptionsList.innerHTML = defaultBallOptionsHTML;
+            updateBallPickerWithArsenal();
+            if (ballHiddenInput) {
+                ballOptionsList.querySelectorAll('.ball-option-item').forEach(item => {
+                    if (item.getAttribute('data-value') === ballHiddenInput.value) {
+                        item.classList.add('selected');
+                    } else {
+                        item.classList.remove('selected');
+                    }
+                });
+            }
+            return;
+        }
+
+        // Search active query across arsenal and 1300+ balls
+        ballOptionsList.innerHTML = '';
+
+        // Auto-detect option
+        if ('auto-detect cv color shape'.includes(q)) {
+            const autoOpt = document.createElement('div');
+            autoOpt.className = 'ball-option-item';
+            autoOpt.setAttribute('data-value', 'auto');
+            if (ballHiddenInput && ballHiddenInput.value === 'auto') autoOpt.classList.add('selected');
+            autoOpt.innerHTML = `
+                <div class="ball-opt-main">✨ Auto-Detect (Ball Color & Core)</div>
+                <div class="ball-opt-sub">Computer Vision HSV Color & Core Shape Detection</div>
+            `;
+            ballOptionsList.appendChild(autoOpt);
+        }
+
+        // Custom Arsenal matches
+        const arsenal = getArsenal();
+        arsenal.forEach(b => {
+            const text = `${b.nickname} ${b.base_name || ''} ${b.layout || ''} ${b.surface || ''}`.toLowerCase();
+            if (text.includes(q)) {
+                const item = document.createElement('div');
+                item.className = 'ball-option-item arsenal-custom-item';
+                item.setAttribute('data-value', b.base_id);
+                item.innerHTML = `
+                    <div class="ball-opt-main">🎳 ${b.nickname}</div>
+                    <div class="ball-opt-sub">My Arsenal | ${b.layout_type.toUpperCase()}: ${b.layout} (${b.surface})</div>
+                `;
+                ballOptionsList.appendChild(item);
             }
         });
+
+        // Search master catalog (Hammer, Storm, Ebonite, Radical, etc.)
+        let count = 0;
+        for (const b of allCatalogBalls) {
+            const matchText = `${b.name} ${b.brand} ${b.coverstock || ''} ${b.core || ''} ${b.status || ''}`.toLowerCase();
+            if (matchText.includes(q)) {
+                ballOptionsList.appendChild(renderDynamicBallItem(b));
+                count++;
+                if (count >= 50) break; // Render top 50 matches for instant fluidity
+            }
+        }
+
+        if (count === 0 && ballOptionsList.children.length === 0) {
+            ballOptionsList.innerHTML = `
+                <div style="padding: 12px; text-align: center; color: var(--text-muted, #94a3b8); font-size: 0.85rem;">
+                    No bowling balls matching "${query}" found.
+                </div>
+            `;
+        }
     }
 
     if (ballSearchFilter) {
@@ -154,11 +251,52 @@ document.addEventListener('DOMContentLoaded', () => {
             const item = e.target.closest('.ball-option-item');
             if (item) {
                 const val = item.getAttribute('data-value');
-                const title = item.querySelector('.ball-opt-main') ? item.querySelector('.ball-opt-main').textContent : item.textContent;
+                const titleEl = item.querySelector('.ball-opt-main');
+                // Extract just the main name without the badges
+                let title = titleEl ? titleEl.childNodes[0].textContent.trim() : item.textContent.trim();
+                if (!title && titleEl) title = titleEl.textContent.trim();
                 selectBallOption(val, title);
             }
         });
     }
+
+    // Load full ball catalog in background
+    async function loadMasterBallCatalog() {
+        try {
+            const res = await fetch('/api/balls');
+            if (!res.ok) return;
+            const data = await res.json();
+            allCatalogBalls = data.balls || [];
+
+            // Populate #arsenalBallModel in My Arsenal modal
+            const arsenalModel = document.getElementById('arsenalBallModel');
+            if (arsenalModel && allCatalogBalls.length > 0) {
+                arsenalModel.innerHTML = '';
+                const brands = {};
+                allCatalogBalls.forEach(b => {
+                    const br = b.brand || 'Other';
+                    if (!brands[br]) brands[br] = [];
+                    brands[br].push(b);
+                });
+
+                for (const [brandName, balls] of Object.entries(brands)) {
+                    const grp = document.createElement('optgroup');
+                    grp.label = `${brandName} (${balls.length} models)`;
+                    balls.forEach(b => {
+                        const opt = document.createElement('option');
+                        opt.value = b.id;
+                        const statusTag = (b.status === 'Retired') ? ' [Retired]' : '';
+                        opt.textContent = `${b.name}${statusTag}`;
+                        grp.appendChild(opt);
+                    });
+                    arsenalModel.appendChild(grp);
+                }
+            }
+        } catch (err) {
+            console.warn('Could not load master ball catalog:', err);
+        }
+    }
+    loadMasterBallCatalog();
 
     // Dismiss dropdown when clicking outside
     document.addEventListener('click', (e) => {

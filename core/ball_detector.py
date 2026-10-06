@@ -213,12 +213,61 @@ BALL_DATABASE: Dict[str, Dict[str, Any]] = {
     }
 }
 
+# Load extended catalog from data/bowling_balls.json
+import os
+import json
+
+_DATA_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "bowling_balls.json")
+if os.path.exists(_DATA_FILE):
+    try:
+        with open(_DATA_FILE, "r", encoding="utf-8") as _f:
+            _catalog = json.load(_f)
+            for _id, _ball in _catalog.items():
+                if _id not in BALL_DATABASE:
+                    BALL_DATABASE[_id] = _ball
+                else:
+                    for _k, _v in _ball.items():
+                        if _k not in BALL_DATABASE[_id] or BALL_DATABASE[_id][_k] is None:
+                            BALL_DATABASE[_id][_k] = _v
+    except Exception as _e:
+        print(f"Warning: could not load {_DATA_FILE}: {_e}")
+
+BALL_ALIASES = {
+    "storm_phaze_2": "storm_phaze_ii",
+    "storm_phaze_ii": "storm_phaze_2",
+}
+
 
 def get_ball_info(ball_id: Optional[str]) -> Dict[str, Any]:
     """Retrieve full ball specifications by ball_id or fallback to generic."""
-    if not ball_id or ball_id not in BALL_DATABASE:
-        return BALL_DATABASE["custom_generic_reactive"]
-    return BALL_DATABASE[ball_id]
+    if not ball_id:
+        return BALL_DATABASE.get("custom_generic_reactive", {})
+    if ball_id in BALL_DATABASE:
+        return BALL_DATABASE[ball_id]
+    alt_id = BALL_ALIASES.get(ball_id)
+    if alt_id and alt_id in BALL_DATABASE:
+        return BALL_DATABASE[alt_id]
+    norm_id = ball_id.replace("-", "_")
+    if norm_id in BALL_DATABASE:
+        return BALL_DATABASE[norm_id]
+    return BALL_DATABASE.get("custom_generic_reactive", {})
+
+
+def get_all_balls() -> List[Dict[str, Any]]:
+    """Return all catalog balls sorted by Brand then Name."""
+    brand_order = {
+        "Hammer": 1,
+        "Storm": 2,
+        "Ebonite": 3,
+        "Radical": 4,
+        "Roto Grip": 5,
+        "Motiv": 6,
+        "Brunswick": 7
+    }
+    return sorted(
+        list(BALL_DATABASE.values()),
+        key=lambda b: (brand_order.get(b.get("brand", ""), 99), b.get("brand", ""), b.get("name", ""))
+    )
 
 
 def detect_ball_from_image_crop(ball_crop_bgr: np.ndarray) -> Dict[str, Any]:

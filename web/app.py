@@ -19,7 +19,7 @@ import config
 from core.tracker import BowlingTracker
 from core.game_tracker import GameTracker
 from core.media_meta import get_video_metadata, generate_video_thumbnail
-from core.ball_detector import BALL_DATABASE, get_ball_info, calculate_ball_trajectory_modifier
+from core.ball_detector import BALL_DATABASE, get_ball_info, calculate_ball_trajectory_modifier, get_all_balls
 from web.auth import verify_passcode, create_session, revoke_session, is_authenticated, SESSION_COOKIE_NAME
 from web.gdrive import gdrive_manager
 
@@ -659,13 +659,29 @@ async def stream_video(filename: str, request: Request):
 
 
 @app.get("/api/balls")
-async def get_bowling_balls(request: Request):
-    """Returns database of popular bowling balls with coverstock and core specs."""
+async def get_bowling_balls(
+    request: Request,
+    brand: Optional[str] = None,
+    q: Optional[str] = None,
+    limit: Optional[int] = None
+):
+    """Returns comprehensive database of bowling balls across Hammer, Storm, Ebonite, Radical, etc."""
     if not is_authenticated(request):
         raise HTTPException(status_code=401, detail="Unauthorized")
     
+    balls = get_all_balls()
+    if brand:
+        b_lower = brand.lower()
+        balls = [b for b in balls if b.get("brand", "").lower() == b_lower]
+    if q:
+        query = q.lower()
+        balls = [b for b in balls if query in b.get("name", "").lower() or query in b.get("core", "").lower() or query in b.get("coverstock", "").lower()]
+    if limit and limit > 0:
+        balls = balls[:limit]
+        
     return {
-        "balls": list(BALL_DATABASE.values())
+        "total": len(balls),
+        "balls": balls
     }
 
 
