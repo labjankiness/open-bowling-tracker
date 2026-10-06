@@ -19,6 +19,7 @@ import config
 from core.tracker import BowlingTracker
 from core.game_tracker import GameTracker
 from core.media_meta import get_video_metadata, generate_video_thumbnail
+from core.ball_detector import BALL_DATABASE, get_ball_info, calculate_ball_trajectory_modifier
 from web.auth import verify_passcode, create_session, revoke_session, is_authenticated, SESSION_COOKIE_NAME
 from web.gdrive import gdrive_manager
 
@@ -312,6 +313,7 @@ def run_video_job(
     handedness: str = "left",
     style: str = "2-handed",
     speed_factor: str = "auto",
+    bowling_ball: str = "auto",
     auto_drive_sync: bool = True
 ):
     job = JOBS.get(job_id)
@@ -406,6 +408,23 @@ def run_video_job(
                 launch_board = max(1, min(39, round(lateral_px / 25.0)))
                 breakpoint_board = max(5, round(launch_board * 0.65))
 
+            # 3b. Resolve Bowling Ball (Manual selection or Auto-detection)
+            if bowling_ball == "auto":
+                if tracker.detected_ball_info and tracker.detected_ball_info["confidence"] >= 0.15:
+                    resolved_ball_id = tracker.detected_ball_info["ball_id"]
+                    ball_det_mode = f"Auto-Detected ({int(tracker.detected_ball_info['confidence'] * 100)}% conf)"
+                else:
+                    resolved_ball_id = "custom_generic_reactive"
+                    ball_det_mode = "Auto-Detect Default"
+            else:
+                resolved_ball_id = bowling_ball
+                ball_det_mode = "Manual User Selection"
+
+            ball_info = get_ball_info(resolved_ball_id)
+            ball_modifiers = calculate_ball_trajectory_modifier(resolved_ball_id)
+
+            peak_drift = getattr(summary, "peak_lateral_drift_boards", 0.0) or 0.0
+
             summary_dict = {
                 "peak_release_velocity_px_s": peak_vel,
                 "ball_speed_mph": est_speed_mph,
@@ -413,15 +432,28 @@ def run_video_job(
                 "video_speed_factor": f"{multiplier:g}x ({'Auto-Detected Slo-Mo' if speed_factor == 'auto' and multiplier > 1.0 else 'Selected Speed'})",
                 "launch_point_board": f"Board {launch_board} ({'Lefty' if is_lefty else 'Righty'})",
                 "breakpoint": f"Board {breakpoint_board} (Apex)",
+                "lateral_drift_boards": peak_drift,
                 "handedness": tracker.resolved_handedness,
                 "delivery_style": tracker.resolved_style,
                 "spine_tilt_at_release_deg": getattr(summary, "peak_spine_tilt_deg", None),
                 "knee_flexion_at_release_deg": getattr(summary, "peak_knee_flexion_deg", None),
                 "hip_shoulder_separation_deg": getattr(summary, "peak_hip_shoulder_separation_deg", None),
                 "lateral_ball_ankle_distance_px": lateral_px,
+                "bowling_ball": {
+                    "id": resolved_ball_id,
+                    "name": ball_info.get("name"),
+                    "brand": ball_info.get("brand"),
+                    "coverstock": ball_info.get("coverstock"),
+                    "core": ball_info.get("core"),
+                    "detection_mode": ball_det_mode,
+                    "reaction_shape": ball_modifiers.get("reaction_shape"),
+                    "hook_multiplier": ball_modifiers.get("hook_multiplier"),
+                    "skid_factor": ball_modifiers.get("skid_factor"),
+                    "flare_potential": ball_modifiers.get("flare_potential"),
+                }
             }
 
-            # 3b. Detect Approach Phases & Rhythm Timing
+            # 3c. Detect Approach Phases & Rhythm Timing
             from core.timing_model import detect_approach_phases
             phases_obj = detect_approach_phases(
                 history=tracker.history,
@@ -536,6 +568,7 @@ async def api_upload(
     handedness: str = Form("left"),
     style: str = Form("2-handed"),
     speed_factor: str = Form("auto"),
+    bowling_ball: str = Form("auto"),
     auto_drive_sync: bool = Form(True),
 ):
     if not is_authenticated(request):
@@ -564,7 +597,7 @@ async def api_upload(
     }
 
     background_tasks.add_task(
-        run_video_job, job_id, str(saved_path), view, mode, handedness, style, speed_factor, auto_drive_sync
+        run_video_job, job_id, str(saved_path), view, mode, handedness, style, speed_factor, bowling_ball, auto_drive_sync
     )
 
     return {"job_id": job_id, "status": "queued"}
@@ -623,6 +656,17 @@ async def stream_video(filename: str, request: Request):
         iterfile_full(),
         headers={"Content-Length": str(file_size), "Content-Type": "video/mp4"}
     )
+
+
+@app.get("/api/balls")
+async def get_bowling_balls(request: Request):
+    """Returns database of popular bowling balls with coverstock and core specs."""
+    if not is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    return {
+        "balls": list(BALL_DATABASE.values())
+    }
 
 
 @app.post("/api/settings/gdrive")
@@ -837,6 +881,7 @@ async def analyze_training_video(
     handedness: str = Form("left"),
     style: str = Form("2-handed"),
     speed_factor: str = Form("auto"),
+    bowling_ball: str = Form("auto"),
     auto_drive_sync: bool = Form(True)
 ):
     """Starts analysis on an existing clip from the connected training folder."""
@@ -862,7 +907,7 @@ async def analyze_training_video(
     }
 
     background_tasks.add_task(
-        run_video_job, job_id, str(source_path), view, mode, handedness, style, speed_factor, auto_drive_sync
+        run_video_job, job_id, str(source_path), view, mode, handedness, style, speed_factor, bowling_ball, auto_drive_sync
     )
 
     return {"job_id": job_id, "status": "queued"}

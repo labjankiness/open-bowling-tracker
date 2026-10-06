@@ -161,6 +161,20 @@ To train or benchmark the Temporal Convolutional Network (TCN) on your hardware 
 python scripts/train_timing_gpu.py
 ```
 
+### 7. Bowling Ball Specification & Auto-Detection
+- **Specification Engine**: Models RG, differential, coverstock chemistry (solid, pearl, hybrid, urethane, polyester/plastic), and hook shape profiles.
+- **Auto-Detection Mode**: Samples ball crops from video frames around wrist release and applies HSV color matching against known models (Storm Phaze II, Hy-Road, Hammer Black Widow 2.0, Purple Pearl Urethane, Roto Grip GEM, Motiv Venom Shock, Brunswick TZone).
+- **Manual Selector Override**: Allows instant selection of your specific arsenal ball with automatic trajectory and flare potential modifier computation.
+
+### 8. Dual-Shot Side-by-Side Video Comparison ("Ghost Mode")
+- Compare any two shots from your library simultaneously with synchronized play/pause and rewind controls.
+- Interactive **Ghost Overlay Blend slider** allows blending two deliveries transparently over each other to isolate footwork drift and release inconsistencies.
+
+### 9. Flexible CV & Manual Game Scoring
+- **Automatic CV Pin Detection**: Computer vision contour & motion energy detection on the pin deck.
+- **Pin Leave & Pocket Analysis**: Identifies leaves (single-pin spares, baby splits, washouts) and provides tactical spare tips.
+- **Manual Score Override**: Allows bowlers to manually edit or enter roll counts directly on the dashboard with real-time official 10-pin score recalculation.
+
 ---
 
 ## 📂 Project Structure

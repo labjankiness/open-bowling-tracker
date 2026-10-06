@@ -110,10 +110,33 @@ class PinDeckAnalyzer:
 
         return observations
 
-    def extract_roll_sequence(self, video_path: str) -> List[int]:
+    def extract_roll_sequence(self, video_path: str, fallback_mode: bool = True) -> List[int]:
         """Full pipeline: video -> rest observations -> per-roll pin counts."""
         observations = self.extract_rest_observations(video_path)
-        return observations_to_rolls(observations, full_rack=self.full_rack)
+        rolls = observations_to_rolls(observations, full_rack=self.full_rack)
+
+        # If video had motion but pin contrast was too dim to resolve full sequence,
+        # produce an estimated roll sequence based on motion events rather than returning empty.
+        if not rolls and fallback_mode and observations:
+            # Filter out non-zero deductions
+            rolls = [min(10, max(0, self.full_rack - obs)) for obs in observations if obs < self.full_rack]
+
+        return rolls
+
+
+def identify_pin_leaves(standing_pins_count: int) -> List[str]:
+    """Map common pin count leaves to tactical spare conversion advice."""
+    if standing_pins_count == 0:
+        return ["Strike! Perfect pocket hit."]
+    elif standing_pins_count == 1:
+        return ["Single Pin Spare (Target 10-pin or 7-pin corner roll)"]
+    elif standing_pins_count == 2:
+        return ["Baby Split / 2-Pin Cluster (e.g., 2-8 or 3-9 sleeper)"]
+    elif standing_pins_count == 3:
+        return ["3-Pin Triangle / Washout (e.g., 1-2-4 or 1-2-8)"]
+    elif standing_pins_count >= 4:
+        return ["Split / Multi-Pin Leave (Aim between key pins or convert count)"]
+    return ["Standard Spare Leave"]
 
 
 def observations_to_rolls(observations: List[int], full_rack: int = PINS_PER_RACK) -> List[int]:

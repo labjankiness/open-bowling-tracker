@@ -30,6 +30,8 @@ class RunSummary:
     peak_release_velocity_px_s: float
     handedness: str = "left"
     delivery_style: str = "2-handed"
+    bowling_ball: str = "Standard Reactive Resin Ball"
+    peak_lateral_drift_boards: float = 0.0
 
 
 class MetricsLogger:

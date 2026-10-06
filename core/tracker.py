@@ -56,6 +56,8 @@ class BowlingTracker:
         # to reject single-frame landmark glitches (see _is_displacement_outlier).
         self._recent_displacements: deque = deque(maxlen=config.VELOCITY_OUTLIER_WINDOW)
         self._wrist_gap_ratios: List[float] = []
+        self._ball_crops: List[np.ndarray] = []
+        self.detected_ball_info: Optional[dict] = None
 
     def run(self) -> RunSummary:
         """Process the full video and return the peak-value summary."""
@@ -85,6 +87,16 @@ class BowlingTracker:
                         if metrics is not None:
                             self.history.append(metrics)
 
+                            # Sample crop around ball position for automatic ball model detection
+                            if prev_ball_position is not None and len(self._ball_crops) < 15 and frame_index % 3 == 0:
+                                bx, by = int(prev_ball_position[0]), int(prev_ball_position[1])
+                                h, w = frame.shape[:2]
+                                pad = int(max(20, min(w, h) * 0.06))
+                                y1, y2 = max(0, by - pad), min(h, by + pad)
+                                x1, x2 = max(0, bx - pad), min(w, bx + pad)
+                                if (y2 - y1) > 15 and (x2 - x1) > 15:
+                                    self._ball_crops.append(frame[y1:y2, x1:x2].copy())
+
                         if writer is not None:
                             writer.write(estimator.draw(frame, frame_landmarks))
                     elif writer is not None:
@@ -98,6 +110,18 @@ class BowlingTracker:
                 if self.style == config.STYLE_AUTO and self._wrist_gap_ratios:
                     avg_gap = sum(self._wrist_gap_ratios) / len(self._wrist_gap_ratios)
                     self.resolved_style = config.STYLE_TWO_HANDED if avg_gap < 0.45 else config.STYLE_ONE_HANDED
+
+                # Run automatic bowling ball detection across sampled ball crops
+                if self._ball_crops:
+                    from core.ball_detector import detect_ball_from_image_crop
+                    best_det = None
+                    highest_conf = -1.0
+                    for crop in self._ball_crops:
+                        det = detect_ball_from_image_crop(crop)
+                        if det["confidence"] > highest_conf:
+                            highest_conf = det["confidence"]
+                            best_det = det
+                    self.detected_ball_info = best_det
         finally:
             capture.release()
             if writer is not None:
@@ -182,6 +206,22 @@ class BowlingTracker:
                 distance /= self.pixels_per_meter
             velocity = distance / dt_seconds if dt_seconds > 0 else 0.0
 
+        # Estimate slide board from ankle position relative to frame center (assuming center dot = board 20)
+        # 39 boards total across lane
+        slide_board = None
+        drift_boards = None
+        if ankle is not None:
+            # Map ankle X coordinate to lane boards (1 to 39)
+            # Default reference: 20 is center of lane
+            shoulder_span = max(1.0, float(np.linalg.norm(left_shoulder - right_shoulder)))
+            lane_center_x = (left_hip[0] + right_hip[0]) / 2.0 if not is_lefty else (right_hip[0] + left_hip[0]) / 2.0
+            board_offset = (ankle[0] - lane_center_x) / max(1.0, (shoulder_span * 0.12))
+            base_board = 20.0 if not is_lefty else 18.0
+            slide_board = float(np.clip(base_board + board_offset, 1.0, 39.0))
+
+            if self.history and self.history[0].slide_foot_board is not None:
+                drift_boards = round(slide_board - self.history[0].slide_foot_board, 1)
+
         metrics = analytics.FrameMetrics(
             frame_index=frame_index,
             timestamp_s=frame_index * dt_seconds,
@@ -190,6 +230,8 @@ class BowlingTracker:
             hip_shoulder_separation_deg=hip_shoulder_separation,
             lateral_ball_ankle_distance=lateral_ball_ankle_distance,
             ball_velocity=velocity,
+            slide_foot_board=round(slide_board, 1) if slide_board is not None else None,
+            lateral_drift_boards=drift_boards,
         )
         return metrics, ball_position
 
@@ -222,6 +264,8 @@ class BowlingTracker:
             peak_separation = max(abs(m.hip_shoulder_separation_deg) for m in self.history)
             peak_lateral_distance = max(m.lateral_ball_ankle_distance for m in self.history)
             peak_velocity = max(m.ball_velocity for m in self.history)
+            drift_values = [abs(m.lateral_drift_boards) for m in self.history if m.lateral_drift_boards is not None]
+            peak_drift = max(drift_values) if drift_values else 0.0
 
         return RunSummary(
             timestamp=MetricsLogger.timestamp_now(),
@@ -237,6 +281,8 @@ class BowlingTracker:
             peak_release_velocity_px_s=round(peak_velocity, 3),
             handedness=self.resolved_handedness,
             delivery_style=self.resolved_style,
+            bowling_ball=(self.detected_ball_info["name"] if self.detected_ball_info else "Standard Reactive Resin Ball"),
+            peak_lateral_drift_boards=round(peak_drift, 1),
         )
 
     def _build_writer(self, capture: cv2.VideoCapture) -> cv2.VideoWriter:

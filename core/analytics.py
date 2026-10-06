@@ -174,3 +174,5 @@ class FrameMetrics:
     hip_shoulder_separation_deg: float
     lateral_ball_ankle_distance: float
     ball_velocity: float
+    slide_foot_board: Optional[float] = None
+    lateral_drift_boards: Optional[float] = None

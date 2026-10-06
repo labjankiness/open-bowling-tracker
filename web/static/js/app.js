@@ -63,14 +63,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load saved bowler profile from localStorage if available
     const savedHandedness = localStorage.getItem('bowlerHandedness');
     const savedStyle = localStorage.getItem('deliveryStyle');
+    const savedBall = localStorage.getItem('bowlingBall');
     const handednessSelect = document.getElementById('bowlerHandedness');
     const styleSelect = document.getElementById('deliveryStyle');
+    const ballSelect = document.getElementById('bowlingBall');
 
     if (savedHandedness && handednessSelect) {
         handednessSelect.value = savedHandedness;
     }
     if (savedStyle && styleSelect) {
         styleSelect.value = savedStyle;
+    }
+    if (savedBall && ballSelect) {
+        ballSelect.value = savedBall;
     }
 
     if (handednessSelect) {
@@ -81,6 +86,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (styleSelect) {
         styleSelect.addEventListener('change', (e) => {
             localStorage.setItem('deliveryStyle', e.target.value);
+        });
+    }
+    if (ballSelect) {
+        ballSelect.addEventListener('change', (e) => {
+            localStorage.setItem('bowlingBall', e.target.value);
         });
     }
 
@@ -96,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('style', document.getElementById('deliveryStyle').value);
         formData.append('speed_factor', document.getElementById('videoSpeed') ? document.getElementById('videoSpeed').value : 'auto');
         formData.append('mode', document.getElementById('analysisMode').value);
+        formData.append('bowling_ball', document.getElementById('bowlingBall') ? document.getElementById('bowlingBall').value : 'auto');
         formData.append('auto_drive_sync', document.getElementById('autoDriveSync').checked);
 
         // UI state -> uploading & processing
@@ -198,6 +209,24 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             if (valTimingRatio) valTimingRatio.textContent = '--';
             if (valBalanceScore) valBalanceScore.textContent = '--';
+        }
+
+        // Footwork Drift & Bowling Ball
+        const valDrift = document.getElementById('valLateralDrift');
+        if (valDrift) {
+            valDrift.textContent = summary.lateral_drift_boards != null 
+                ? (summary.lateral_drift_boards > 0 ? `+${summary.lateral_drift_boards}` : `${summary.lateral_drift_boards}`)
+                : '0.0';
+        }
+
+        const valBall = document.getElementById('valBowlingBall');
+        const valReaction = document.getElementById('valBallReactionShape');
+        if (summary.bowling_ball) {
+            if (valBall) valBall.textContent = summary.bowling_ball.name || 'Standard Ball';
+            if (valReaction) valReaction.textContent = `${summary.bowling_ball.reaction_shape || 'Benchmark'} (${summary.bowling_ball.detection_mode || ''})`;
+        } else {
+            if (valBall) valBall.textContent = 'Generic Reactive';
+            if (valReaction) valReaction.textContent = 'Standard Cover';
         }
 
         // AI Bowling Coach Breakdown
@@ -334,6 +363,118 @@ document.addEventListener('DOMContentLoaded', () => {
             rollsRow.appendChild(rollCell);
             cumRow.appendChild(cumCell);
         }
+
+        // Pin Leave Annotation
+        const pinLeaveTag = document.getElementById('pinLeaveTag');
+        if (pinLeaveTag && game.rolls && game.rolls.length > 0) {
+            const firstRoll = game.rolls[0];
+            const standing = Math.max(0, 10 - firstRoll);
+            if (firstRoll === 10) {
+                pinLeaveTag.textContent = 'Strike (0 pins standing)';
+            } else if (standing === 1) {
+                pinLeaveTag.textContent = '1-Pin Leave (Corner or Pocket Spare)';
+            } else if (standing === 2) {
+                pinLeaveTag.textContent = '2-Pin Leave / Cluster';
+            } else {
+                pinLeaveTag.textContent = `${standing} Pins Standing on Deck`;
+            }
+        }
+
+        // Initialize Manual Rolls Input
+        const manualInput = document.getElementById('manualRollsInput');
+        if (manualInput && game.rolls) {
+            manualInput.value = game.rolls.join(', ');
+        }
+    }
+
+    // Toggle Manual Score Drawer
+    const btnToggleManualScore = document.getElementById('btnToggleManualScore');
+    const manualScoreDrawer = document.getElementById('manualScoreDrawer');
+    if (btnToggleManualScore && manualScoreDrawer) {
+        btnToggleManualScore.addEventListener('click', () => {
+            manualScoreDrawer.classList.toggle('hidden');
+        });
+    }
+
+    // Apply Manual Score Override
+    const btnApplyManualScore = document.getElementById('btnApplyManualScore');
+    if (btnApplyManualScore) {
+        btnApplyManualScore.addEventListener('click', () => {
+            const inputVal = document.getElementById('manualRollsInput').value;
+            const rolls = inputVal.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n >= 0 && n <= 10);
+            if (rolls.length === 0) {
+                alert('Please enter valid pin counts (0-10 separated by commas).');
+                return;
+            }
+
+            // Calculate standard 10-pin score locally
+            const simulatedFrames = [];
+            let rIdx = 0;
+            let cumScore = 0;
+
+            for (let f = 1; f <= 10 && rIdx < rolls.length; f++) {
+                const r1 = rolls[rIdx];
+                if (f === 10) {
+                    const r2 = rIdx + 1 < rolls.length ? rolls[rIdx + 1] : 0;
+                    const r3 = rIdx + 2 < rolls.length ? rolls[rIdx + 2] : 0;
+                    const fScore = r1 + r2 + r3;
+                    cumScore += fScore;
+                    simulatedFrames.push({
+                        frame_number: 10,
+                        rolls: [r1, r2, r3],
+                        is_strike: (r1 === 10),
+                        is_spare: (r1 < 10 && r1 + r2 === 10),
+                        frame_score: fScore,
+                        cumulative_score: cumScore
+                    });
+                    break;
+                } else if (r1 === 10) {
+                    const b1 = rIdx + 1 < rolls.length ? rolls[rIdx + 1] : 0;
+                    const b2 = rIdx + 2 < rolls.length ? rolls[rIdx + 2] : 0;
+                    cumScore += 10 + b1 + b2;
+                    simulatedFrames.push({
+                        frame_number: f,
+                        rolls: [10],
+                        is_strike: true,
+                        is_spare: false,
+                        frame_score: 10 + b1 + b2,
+                        cumulative_score: cumScore
+                    });
+                    rIdx += 1;
+                } else {
+                    const r2 = rIdx + 1 < rolls.length ? rolls[rIdx + 1] : 0;
+                    const isSpare = (r1 + r2 === 10);
+                    const bonus = isSpare && rIdx + 2 < rolls.length ? rolls[rIdx + 2] : 0;
+                    const fScore = r1 + r2 + bonus;
+                    cumScore += fScore;
+                    simulatedFrames.push({
+                        frame_number: f,
+                        rolls: [r1, r2],
+                        is_strike: false,
+                        is_spare: isSpare,
+                        frame_score: fScore,
+                        cumulative_score: cumScore
+                    });
+                    rIdx += 2;
+                }
+            }
+
+            const updatedGame = {
+                rolls: rolls,
+                total_score: cumScore,
+                frames: simulatedFrames,
+                is_complete: simulatedFrames.length === 10
+            };
+
+            const scoreDetectionTag = document.getElementById('scoreDetectionTag');
+            if (scoreDetectionTag) {
+                scoreDetectionTag.textContent = '✏️ Manual User Override';
+                scoreDetectionTag.className = 'badge badge-warning';
+            }
+
+            renderScorecard(updatedGame);
+            manualScoreDrawer.classList.add('hidden');
+        });
     }
 
     function renderChart(history) {
@@ -958,6 +1099,91 @@ document.addEventListener('DOMContentLoaded', () => {
                     switchLibraryTab(tabDrive, libraryListDrive);
                 }
             }
+        });
+    }
+
+    // Dual-Shot Side-by-Side Comparison Modal
+    const btnOpenCompareModal = document.getElementById('btnOpenCompareModal');
+    const btnCloseCompareModal = document.getElementById('btnCloseCompareModal');
+    const compareModal = document.getElementById('compareModal');
+    const compareVideoA = document.getElementById('compareVideoA');
+    const compareVideoB = document.getElementById('compareVideoB');
+    const compareSelectSecondary = document.getElementById('compareSelectSecondary');
+    const btnSyncPlay = document.getElementById('btnSyncPlay');
+    const btnSyncRestart = document.getElementById('btnSyncRestart');
+    const compareGhostOpacity = document.getElementById('compareGhostOpacity');
+
+    if (btnOpenCompareModal && compareModal) {
+        btnOpenCompareModal.addEventListener('click', async () => {
+            compareModal.classList.remove('hidden');
+            const mainVideo = document.getElementById('resultVideo');
+            if (mainVideo && mainVideo.src) {
+                compareVideoA.src = mainVideo.src;
+                compareVideoA.currentTime = mainVideo.currentTime || 0;
+            }
+
+            // Populate secondary video options from library
+            try {
+                const resp = await fetch('/api/library');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const allClips = [...(data.local_videos || []), ...(data.training_videos || [])];
+                    compareSelectSecondary.innerHTML = '<option value="">Select a previous video from library...</option>';
+                    allClips.forEach(v => {
+                        const opt = document.createElement('option');
+                        opt.value = v.url;
+                        opt.textContent = `${v.name} (${v.size_mb} MB)`;
+                        compareSelectSecondary.appendChild(opt);
+                    });
+                }
+            } catch (err) {
+                console.error('Error fetching library for comparison:', err);
+            }
+        });
+    }
+
+    if (btnCloseCompareModal && compareModal) {
+        btnCloseCompareModal.addEventListener('click', () => {
+            compareModal.classList.add('hidden');
+            if (compareVideoA) compareVideoA.pause();
+            if (compareVideoB) compareVideoB.pause();
+        });
+    }
+
+    if (compareSelectSecondary && compareVideoB) {
+        compareSelectSecondary.addEventListener('change', (e) => {
+            if (e.target.value) {
+                compareVideoB.src = e.target.value;
+                compareVideoB.load();
+            }
+        });
+    }
+
+    if (btnSyncPlay && compareVideoA && compareVideoB) {
+        btnSyncPlay.addEventListener('click', () => {
+            if (compareVideoA.paused) {
+                compareVideoA.play();
+                compareVideoB.play();
+                btnSyncPlay.textContent = '⏸ Pause Both';
+            } else {
+                compareVideoA.pause();
+                compareVideoB.pause();
+                btnSyncPlay.textContent = '▶️ Synchronized Play';
+            }
+        });
+    }
+
+    if (btnSyncRestart && compareVideoA && compareVideoB) {
+        btnSyncRestart.addEventListener('click', () => {
+            compareVideoA.currentTime = 0;
+            compareVideoB.currentTime = 0;
+        });
+    }
+
+    if (compareGhostOpacity && compareVideoB) {
+        compareGhostOpacity.addEventListener('input', (e) => {
+            const val = e.target.value / 100;
+            compareVideoB.style.opacity = val;
         });
     }
 });

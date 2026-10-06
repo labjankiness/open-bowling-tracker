@@ -145,6 +145,21 @@
                     </div>
 
                     <div class="control-group">
+                        <label for="bowlingBall">Bowling Ball</label>
+                        <select id="bowlingBall" name="bowling_ball">
+                            <option value="auto" selected>✨ Auto-Detect (Ball Color & Core)</option>
+                            <option value="storm_phaze_2">Storm Phaze II (Solid Reactive)</option>
+                            <option value="storm_hy_road">Storm Hy-Road (Hybrid Reactive)</option>
+                            <option value="hammer_black_widow_2_0_hybrid">Hammer Black Widow 2.0 (Asym Hybrid)</option>
+                            <option value="hammer_purple_pearl_urethane">Hammer Purple Pearl Urethane (Control)</option>
+                            <option value="roto_grip_gem">Roto Grip GEM (Heavy Oil Asym)</option>
+                            <option value="motiv_venom_shock">Motiv Venom Shock (Benchmark Solid)</option>
+                            <option value="brunswick_tzone_spare">Brunswick TZone / Plastic Spare (Straight)</option>
+                            <option value="custom_generic_reactive">Generic Reactive Resin</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
                         <label for="videoSpeed">Capture Speed / Slo-Mo</label>
                         <select id="videoSpeed" name="speed_factor">
                             <option value="auto" selected>✨ Auto-Detect (Auto-SloMo)</option>
@@ -227,6 +242,16 @@
                         <span class="stat-value" id="valBalanceScore">--</span>
                         <span class="stat-unit">/ 100 score</span>
                     </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Footwork Drift</span>
+                        <span class="stat-value" id="valLateralDrift">--</span>
+                        <span class="stat-unit">boards</span>
+                    </div>
+                    <div class="stat-box highlight-box">
+                        <span class="stat-label">Bowling Ball</span>
+                        <span class="stat-value" id="valBowlingBall">--</span>
+                        <span class="stat-unit" id="valBallReactionShape">core & cover</span>
+                    </div>
                 </div>
 
                 <!-- AI Bowling Coach Advice Panel -->
@@ -278,6 +303,25 @@
                         </tbody>
                     </table>
                 </div>
+                <!-- Manual Scoring & Pin Leave Control Toolbar -->
+                <div class="scorecard-controls-bar">
+                    <div class="score-mode-pill">
+                        <span id="scoreDetectionTag" class="badge badge-success">🤖 CV Pin Deck Detection</span>
+                        <span id="pinLeaveTag" class="pin-leave-text">--</span>
+                    </div>
+                    <div class="score-manual-actions">
+                        <button type="button" id="btnToggleManualScore" class="btn btn-sm btn-outline">✏️ Manual Score Correction</button>
+                    </div>
+                </div>
+
+                <!-- Manual Score Correction Inline Drawer -->
+                <div id="manualScoreDrawer" class="manual-score-drawer hidden">
+                    <span class="drawer-title">Manual Roll Editor (Overrule or Enter Missing Throws):</span>
+                    <div class="manual-rolls-input-group">
+                        <input type="text" id="manualRollsInput" placeholder="e.g. 10, 9, 1, 10, 8, 2, 10" class="input-text">
+                        <button type="button" id="btnApplyManualScore" class="btn btn-sm btn-primary">Recalculate Scorecard</button>
+                    </div>
+                </div>
                 <div id="scorecardNote" class="scorecard-note hidden"></div>
             </div>
 
@@ -286,6 +330,7 @@
                 <div class="card-header-inline">
                     <h3>Annotated Video Playback</h3>
                     <div class="player-controls">
+                        <button type="button" id="btnOpenCompareModal" class="btn btn-sm btn-outline">👥 Side-by-Side Comparison</button>
                         <a id="btnDownloadVideo" href="#" download class="btn btn-sm btn-ghost">Download MP4</a>
                     </div>
                 </div>
@@ -435,6 +480,54 @@
                 <div class="modal-actions">
                     <button type="button" id="btnCancelOneDrive" class="btn btn-ghost">Close</button>
                     <button type="button" id="btnSaveOneDrive" class="btn btn-primary">Save Client ID</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Side-by-Side Comparison Modal -->
+    <div id="compareModal" class="modal-overlay hidden">
+        <div class="modal-box modal-xl">
+            <div class="modal-header">
+                <h3>👥 Dual-Shot Side-by-Side Comparison</h3>
+                <button id="btnCloseCompareModal" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="compare-selectors">
+                    <div class="compare-pick">
+                        <label>Primary Shot (Current)</label>
+                        <span id="comparePrimaryLabel" class="pill-badge">Loaded Shot</span>
+                    </div>
+                    <div class="compare-pick">
+                        <label for="compareSelectSecondary">Comparison Reference Shot:</label>
+                        <select id="compareSelectSecondary" class="input-select">
+                            <option value="">Select a previous video from library...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="compare-stage">
+                    <div class="compare-panel">
+                        <h4>Current Delivery</h4>
+                        <div class="video-wrapper">
+                            <video id="compareVideoA" playsinline muted controls></video>
+                        </div>
+                    </div>
+                    <div class="compare-panel">
+                        <h4>Reference Delivery</h4>
+                        <div class="video-wrapper">
+                            <video id="compareVideoB" playsinline muted controls></video>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="compare-controls">
+                    <button type="button" id="btnSyncPlay" class="btn btn-primary btn-sm">▶️ Synchronized Play / Pause</button>
+                    <button type="button" id="btnSyncRestart" class="btn btn-outline btn-sm">⏮ Rewind Both</button>
+                    <label class="ghost-toggle-label">
+                        <input type="range" id="compareGhostOpacity" min="0" max="100" value="50">
+                        <span>Ghost Overlay Blend</span>
+                    </label>
                 </div>
             </div>
         </div>
