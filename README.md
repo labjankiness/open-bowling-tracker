@@ -161,10 +161,22 @@ To train or benchmark the Temporal Convolutional Network (TCN) on your hardware 
 python scripts/train_timing_gpu.py
 ```
 
-### 7. Bowling Ball Specification & Auto-Detection
-- **Specification Engine**: Models RG, differential, coverstock chemistry (solid, pearl, hybrid, urethane, polyester/plastic), and hook shape profiles.
-- **Auto-Detection Mode**: Samples ball crops from video frames around wrist release and applies HSV color matching against known models (Storm Phaze II, Hy-Road, Hammer Black Widow 2.0, Purple Pearl Urethane, Roto Grip GEM, Motiv Venom Shock, Brunswick TZone).
-- **Manual Selector Override**: Allows instant selection of your specific arsenal ball with automatic trajectory and flare potential modifier computation.
+### 7. Bowling Ball Specification, Master Database & "My Arsenal" Manager
+- **1,764+ Master Ball Database**: Covers all new, current, and retired/vintage models across 6 major manufacturers:
+  - **Storm Bowling** (627 models: Phaze, Hy-Road, !Q Tour, Summit, Absolute, DNA, Crux, Code, Marvel, etc.)
+  - **Hammer Bowling** (326 models: Black Widow, Zero Mercy, Effect, Vibe, Purple Pearl Urethane, etc.)
+  - **Ebonite Bowling** (264 models: The Great One, Turbo X, Game Breaker series, Matrix, Warrior, etc.)
+  - **Brunswick Bowling** (221 models: Combat, Warning Alert, Quantum, Danger Zone, Rhino, Inferno, etc.)
+  - **Motiv Bowling** (194 models: Jackal series, Venom Shock, Raptor, Forge, Tank Microcell, etc.)
+  - **Radical Bowling** (132 models: Evil Eye, Intel Tour, Deadly Rattler, Outer Limits, Zigzag, etc.)
+- **"My Arsenal & PAP" Manager**:
+  - Save your personal **Positive Axis Point (PAP)** coordinates (horizontal & vertical offset).
+  - Configure custom drilled balls using **Storm Dual Angle** (Drilling × Pin-PAP × VAL) or **2LS (Two-Handed Layout System)**.
+  - Track customized surface preparation grits (e.g. 2000-grit TruCut, Box Finish, 1000-grit Siaair).
+  - Selected arsenal balls dynamically adjust skid factor, flare potential, and trajectory modifiers in the analytics engine.
+- **Auto-Detection & Real-Time Search**:
+  - Samples ball crops around release using HSV color-space matching for iconic balls.
+  - Interactive dashboard search combobox with instant substring indexing, brand badges, and `Current` / `Retired` status pills.
 
 ### 8. Dual-Shot Side-by-Side Video Comparison ("Ghost Mode")
 - Compare any two shots from your library simultaneously with synchronized play/pause and rewind controls.
@@ -185,6 +197,7 @@ live-bowling-tracker/
 ├── config.py                   # Central configuration & landmark definitions
 ├── core/
 │   ├── tracker.py              # Biomechanics tracker orchestrator
+│   ├── ball_detector.py        # Ball catalog loader, HSV auto-detector & trajectory modifiers
 │   ├── analytics.py            # Vector math for angles, speeds & rev rate
 │   ├── timing_model.py         # 5-phase approach timing & balance synchronizer
 │   ├── pose_estimator.py       # MediaPipe Pose Tasks API wrapper
@@ -193,6 +206,7 @@ live-bowling-tracker/
 │   ├── game_tracker.py         # 10-pin game scoring tracker
 │   └── scoring.py              # Scorecard rules engine
 ├── scripts/
+│   ├── harvest_balls.py        # Ball database harvester (Shopify & Bowwwl scrapers)
 │   ├── batch_annotate.py       # Batch annotation runner with skip & deduplication logic
 │   ├── train_baseline.py       # Personal bowler baseline profiling script
 │   └── train_timing_gpu.py     # Dual-GPU / DirectML / CPU TCN benchmark & trainer
@@ -203,12 +217,18 @@ live-bowling-tracker/
 │   ├── templates/              # Jinja2 HTML templates (dashboard, login)
 │   └── static/                 # CSS stylesheets, JS frontend scripts, icons
 ├── data/
+│   ├── bowling_balls.json      # Master catalog of 1,764+ bowling balls & factory specs
 │   ├── input/                  # Uploaded raw videos
 │   ├── output/                 # H.264 annotated browser-ready MP4s
 │   ├── thumbnails/             # Cached JPEG video previews
 │   └── bowler_profile.json     # Trained personal baseline profile
 ├── models/
 │   └── pose_landmarker_heavy.task # Heavy MediaPipe model bundle
+├── tests/
+│   ├── test_ball_catalog.py    # Unit tests for 6-brand bowling ball catalog
+│   ├── test_analytics.py       # Tests for biomechanics vector math
+│   ├── test_pin_detector.py    # Tests for pin detection
+│   └── test_scoring.py         # Tests for USBC 10-pin scoring rules engine
 └── logs/
     └── metrics_log.csv         # Shot-by-shot biomechanics log
 ```
